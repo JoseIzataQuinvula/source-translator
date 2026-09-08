@@ -11,7 +11,7 @@
 session_start();
 
 // Admin protection
-define('ADMIN_KEY', getenv('ST_ADMIN_KEY') ?: 'duckstack2024');
+define('ADMIN_KEY', getenv('ST_ADMIN_KEY') ?: '9b44a78a8dd4972f0e7e7d3be86fe274');
 
 if (isset($_GET['key']) && $_GET['key'] === ADMIN_KEY) {
     $_SESSION['is_admin'] = true;
