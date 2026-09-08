@@ -127,6 +127,8 @@ impl SupportedLanguages {
             languages: vec![
                 Language { code: "en".to_string(), name: "English".to_string() },
                 Language { code: "pt-BR".to_string(), name: "Portuguese (Brazil)".to_string() },
+                Language { code: "pt-AO".to_string(), name: "Portuguese (Angola)".to_string() },
+                Language { code: "pt-PT".to_string(), name: "Portuguese (Portugal)".to_string() },
                 Language { code: "es".to_string(), name: "Spanish".to_string() },
                 Language { code: "fr".to_string(), name: "French".to_string() },
                 Language { code: "de".to_string(), name: "German".to_string() },

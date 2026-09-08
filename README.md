@@ -178,6 +178,8 @@ func main() {
 |-------|---------------------|
 | `en`  | English             |
 | `pt-BR` | Portuguese (Brazil) |
+| `pt-AO` | Portuguese (Angola) |
+| `pt-PT` | Portuguese (Portugal) |
 | `es`  | Spanish             |
 | `fr`  | French              |
 | `de`  | German              |
