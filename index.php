@@ -1,85 +1,16 @@
 <?php
 /**
  * Source Translator - Demonstracao em PHP Local
- * Modelo: Cache Local + Motor Web Gratuito
+ * Sistema Resiliente com Cache + Fallback Multi-Provedor
  */
 
-function traduzirTexto($texto, $idiomaDestino = 'en', $idiomaOrigem = 'pt') {
-    if (empty(trim($texto))) {
-        return ['texto' => '', 'cached' => false, 'erro' => ''];
-    }
+require_once __DIR__ . '/sdk/php/src/Cache.php';
+require_once __DIR__ . '/sdk/php/src/Providers.php';
+require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
-    $cacheFile = __DIR__ . '/cache_traducoes.json';
-    $cache = file_exists($cacheFile) ? json_decode(file_get_contents($cacheFile), true) : [];
-    $chaveHash = md5(mb_strtolower($texto) . '_' . $idiomaOrigem . '_' . $idiomaDestino);
+use SourceTranslator\SourceTranslator;
 
-    // 1. Verifica no cache
-    if (isset($cache[$chaveHash])) {
-        return [
-            'texto' => $cache[$chaveHash],
-            'cached' => true,
-            'erro' => ''
-        ];
-    }
-
-    // 2. Chama a API Google Translate
-    $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" 
-           . urlencode($idiomaOrigem) 
-           . "&tl=" . urlencode($idiomaDestino) 
-           . "&dt=t&q=" . urlencode($texto);
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-    $resposta = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode !== 200 || !$resposta) {
-        return [
-            'texto' => $texto,
-            'cached' => false,
-            'erro' => 'Falha na conexao com o servico de traducao.'
-        ];
-    }
-
-    $dados = json_decode($resposta, true);
-    $textoTraduzido = isset($dados[0][0][0]) ? $dados[0][0][0] : null;
-
-    // 3. Valida se a traducao e diferente do original
-    if ($textoTraduzido === null || empty(trim($textoTraduzido))) {
-        return [
-            'texto' => $texto,
-            'cached' => false,
-            'erro' => 'A API nao conseguiu traduzir este texto.'
-        ];
-    }
-
-    $textoNormalizado = mb_strtolower(trim($textoTraduzido));
-    $originalNormalizado = mb_strtolower(trim($texto));
-
-    if ($textoNormalizado === $originalNormalizado && $idiomaOrigem !== $idiomaDestino) {
-        return [
-            'texto' => $textoTraduzido,
-            'cached' => false,
-            'erro' => 'A traducao retornou identica ao original. Tente uma frase mais longa.'
-        ];
-    }
-
-    // 4. Salva no cache apenas se for uma traducao valida
-    $cache[$chaveHash] = $textoTraduzido;
-    file_put_contents($cacheFile, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-    return [
-        'texto' => $textoTraduzido,
-        'cached' => false,
-        'erro' => ''
-    ];
-}
+$translator = new SourceTranslator();
 
 $resultado = null;
 $textoOriginal = '';
@@ -88,7 +19,7 @@ $idiomaDestino = 'en';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     $textoOriginal = $_POST['texto'];
     $idiomaDestino = $_POST['idioma'];
-    $resultado = traduzirTexto($textoOriginal, $idiomaDestino);
+    $resultado = $translator->translate($textoOriginal, $idiomaDestino, 'pt');
 }
 ?>
 
@@ -110,15 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         button:hover { background-color: #0052a3; }
         button svg { width: 18px; height: 18px; fill: #fff; }
         .result-box { margin-top: 25px; padding: 15px; background: #eef6ff; border-left: 4px solid #0066cc; border-radius: 4px; }
-        .error-box { margin-top: 25px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
+        .fallback-box { margin-top: 25px; padding: 15px; background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 4px; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; margin-top: 10px; }
         .badge svg { width: 14px; height: 14px; }
         .badge-cache { background: #28a745; color: #fff; }
         .badge-cache svg { fill: #fff; }
         .badge-web { background: #17a2b8; color: #fff; }
         .badge-web svg { fill: #fff; }
-        .badge-error { background: #dc3545; color: #fff; }
-        .badge-error svg { fill: #fff; }
+        .badge-offline { background: #ff9800; color: #fff; }
+        .badge-offline svg { fill: #fff; }
+        .stats { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -132,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         </svg>
         Source Translator (PHP Demo)
     </h1>
-    <p><small>Teste de traducao local com armazenamento em cache JSON.</small></p>
+    <p><small>Sistema resiliente com cache local e fallback multiprovedor.</small></p>
 
     <form method="POST" action="index.php">
         <label for="texto">Texto original (em Portugues):</label>
@@ -158,23 +90,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     </form>
 
     <?php if ($resultado): ?>
-        <?php if (!empty($resultado['erro'])): ?>
-            <div class="error-box">
-                <strong>Aviso:</strong>
-                <p><?php echo htmlspecialchars($resultado['erro']); ?></p>
-                <p><small>Texto original retornado: <?php echo htmlspecialchars($resultado['texto']); ?></small></p>
+        <?php if ($resultado['fallback']): ?>
+            <div class="fallback-box">
+                <strong>Modo Offline Ativo</strong>
+                <p>Todos os servicos de traducao estao temporariamente indisponiveis. O texto original foi mantido.</p>
+                <p><small>O texto foi salvo na fila de pendencias e sera traduzido automaticamente quando os servicos voltarem.</small></p>
+                <span class="badge badge-offline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 1l22 22"/>
+                        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+                        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                        <line x1="12" y1="20" x2="12.01" y2="20"/>
+                    </svg>
+                    Offline - Texto Original Mantido
+                </span>
             </div>
         <?php else: ?>
             <div class="result-box">
                 <strong>Resultado da Traducao:</strong>
-                <p><?php echo htmlspecialchars($resultado['texto']); ?></p>
+                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
                 
                 <?php if ($resultado['cached']): ?>
                     <span class="badge badge-cache">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                         </svg>
-                        Veio do Cache Local (Instantaneo)
+                        Cache Local (<?php echo $resultado['latency_ms']; ?>ms)
                     </span>
                 <?php else: ?>
                     <span class="badge badge-web">
@@ -183,12 +127,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
                             <line x1="2" y1="12" x2="22" y2="12"/>
                             <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
                         </svg>
-                        Traduzido da Web & Salvo no Cache
+                        <?php echo $resultado['provider']; ?> (<?php echo $resultado['latency_ms']; ?>ms)
                     </span>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
     <?php endif; ?>
+
+    <div class="stats">
+        <strong>Provedores ativos:</strong> Google, Bing, MyMemory<br>
+        <strong>Cache:</strong> <?php echo $translator->cacheStats()['total_entries']; ?> traducoes salvas<br>
+        <strong>Pendencias:</strong> <?php echo $translator->getPendingCount(); ?> traducoes na fila
+    </div>
 </div>
 
 </body>
