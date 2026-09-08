@@ -132,11 +132,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'skip'];
         $history[] = ['out' => "DNT: {$stats['do_not_translate_count']}", 'type' => 'info'];
     } elseif ($cmd === '@pacotes list') {
+        $history[] = ['out' => '=== PACOTES (GitHub) ===', 'type' => 'info'];
+        $history[] = ['out' => 'A buscar pacotes no GitHub...', 'type' => 'skip'];
+        
+        $langs = ['en', 'pt', 'pt-AO', 'es', 'fr'];
+        $total = 0;
+        $found = 0;
+        
+        foreach ($langs as $lang) {
+            $url = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $content = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200 && !empty($content)) {
+                $data = json_decode($content, true);
+                if (is_array($data)) {
+                    $count = count($data);
+                    $total += $count;
+                    $found++;
+                    $history[] = ['out' => "", 'type' => 'ok'];
+                    $history[] = ['out' => "  @{$lang}", 'type' => 'info'];
+                    $history[] = ['out' => "  Termos: {$count}", 'type' => 'ok'];
+                    $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
+                    foreach ($data as $id => $val) {
+                        if (!is_string($val)) continue;
+                        $preview = mb_strlen($val) > 40 ? mb_substr($val, 0, 40) . '...' : $val;
+                        $history[] = ['out' => "    [{$id}] {$preview}", 'type' => 'dim'];
+                    }
+                }
+            }
+        }
+        
+        if ($found === 0) {
+            $history[] = ['out' => 'Nenhum pacote encontrado no GitHub.', 'type' => 'skip'];
+        } else {
+            $history[] = ['out' => "", 'type' => 'ok'];
+            $history[] = ['out' => "Total: {$found} pacotes, {$total} termos", 'type' => 'info'];
+        }
+    } elseif ($cmd === '@pacotes locais list') {
         $files = glob($localesDir . '*.json');
         if (empty($files)) {
-            $history[] = ['out' => 'Nenhum pacote encontrado.', 'type' => 'skip'];
+            $history[] = ['out' => 'Nenhum pacote local encontrado.', 'type' => 'skip'];
         } else {
-            $history[] = ['out' => '=== PACOTES ===', 'type' => 'info'];
+            $history[] = ['out' => '=== PACOTES LOCAIS ===', 'type' => 'info'];
             $total = 0;
             foreach ($files as $f) {
                 $lang = pathinfo($f, PATHINFO_FILENAME);
@@ -397,6 +442,7 @@ const commands = [
     '@pt ate mais @en',
     '@login ',
     '@pacotes list',
+    '@pacotes locais list',
     '@pt download',
     '@pt update',
     '@pt create',
