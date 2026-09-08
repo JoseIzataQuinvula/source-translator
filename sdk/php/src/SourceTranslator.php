@@ -53,13 +53,19 @@ class SourceTranslator
             try {
                 $result = $provider->translate($text, $sourceLang, $targetLang);
 
-                $this->cache->set(
-                    $text,
-                    $sourceLang,
-                    $targetLang,
-                    $result['translated_text'],
-                    $result['provider']
-                );
+                // Validate: don't cache if translation is identical to source (different languages)
+                $normalizedResult = mb_strtolower(trim($result['translated_text']));
+                $normalizedText = mb_strtolower(trim($text));
+                
+                if ($normalizedResult !== $normalizedText || $sourceLang === $targetLang) {
+                    $this->cache->set(
+                        $text,
+                        $sourceLang,
+                        $targetLang,
+                        $result['translated_text'],
+                        $result['provider']
+                    );
+                }
 
                 return [
                     'translated_text' => $result['translated_text'],

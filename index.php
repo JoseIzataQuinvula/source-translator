@@ -6,20 +6,23 @@
 
 function traduzirTexto($texto, $idiomaDestino = 'en', $idiomaOrigem = 'pt') {
     if (empty(trim($texto))) {
-        return ['texto' => '', 'cached' => false];
+        return ['texto' => '', 'cached' => false, 'erro' => ''];
     }
 
     $cacheFile = __DIR__ . '/cache_traducoes.json';
     $cache = file_exists($cacheFile) ? json_decode(file_get_contents($cacheFile), true) : [];
-    $chaveHash = md5($texto . '_' . $idiomaOrigem . '_' . $idiomaDestino);
+    $chaveHash = md5(mb_strtolower($texto) . '_' . $idiomaOrigem . '_' . $idiomaDestino);
 
+    // 1. Verifica no cache
     if (isset($cache[$chaveHash])) {
         return [
             'texto' => $cache[$chaveHash],
-            'cached' => true
+            'cached' => true,
+            'erro' => ''
         ];
     }
 
+    // 2. Chama a API Google Translate
     $url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" 
            . urlencode($idiomaOrigem) 
            . "&tl=" . urlencode($idiomaDestino) 
@@ -30,19 +33,51 @@ function traduzirTexto($texto, $idiomaDestino = 'en', $idiomaOrigem = 'pt') {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
     $resposta = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    $dados = json_decode($resposta, true);
-    $textoTraduzido = isset($dados[0][0][0]) ? $dados[0][0][0] : $texto;
+    if ($httpCode !== 200 || !$resposta) {
+        return [
+            'texto' => $texto,
+            'cached' => false,
+            'erro' => 'Falha na conexao com o servico de traducao.'
+        ];
+    }
 
+    $dados = json_decode($resposta, true);
+    $textoTraduzido = isset($dados[0][0][0]) ? $dados[0][0][0] : null;
+
+    // 3. Valida se a traducao e diferente do original
+    if ($textoTraduzido === null || empty(trim($textoTraduzido))) {
+        return [
+            'texto' => $texto,
+            'cached' => false,
+            'erro' => 'A API nao conseguiu traduzir este texto.'
+        ];
+    }
+
+    $textoNormalizado = mb_strtolower(trim($textoTraduzido));
+    $originalNormalizado = mb_strtolower(trim($texto));
+
+    if ($textoNormalizado === $originalNormalizado && $idiomaOrigem !== $idiomaDestino) {
+        return [
+            'texto' => $textoTraduzido,
+            'cached' => false,
+            'erro' => 'A traducao retornou identica ao original. Tente uma frase mais longa.'
+        ];
+    }
+
+    // 4. Salva no cache apenas se for uma traducao valida
     $cache[$chaveHash] = $textoTraduzido;
     file_put_contents($cacheFile, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     return [
         'texto' => $textoTraduzido,
-        'cached' => false
+        'cached' => false,
+        'erro' => ''
     ];
 }
 
@@ -75,12 +110,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         button:hover { background-color: #0052a3; }
         button svg { width: 18px; height: 18px; fill: #fff; }
         .result-box { margin-top: 25px; padding: 15px; background: #eef6ff; border-left: 4px solid #0066cc; border-radius: 4px; }
+        .error-box { margin-top: 25px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; margin-top: 10px; }
         .badge svg { width: 14px; height: 14px; }
         .badge-cache { background: #28a745; color: #fff; }
         .badge-cache svg { fill: #fff; }
-        .badge-web { background: #ffc107; color: #000; }
-        .badge-web svg { fill: #000; }
+        .badge-web { background: #17a2b8; color: #fff; }
+        .badge-web svg { fill: #fff; }
+        .badge-error { background: #dc3545; color: #fff; }
+        .badge-error svg { fill: #fff; }
     </style>
 </head>
 <body>
@@ -98,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
 
     <form method="POST" action="index.php">
         <label for="texto">Texto original (em Portugues):</label>
-        <textarea id="texto" name="texto" placeholder="Digite o texto do seu site aqui..."><?php echo htmlspecialchars($textoOriginal); ?></textarea>
+        <textarea id="texto" name="texto" placeholder="Bom dia, como voce esta?"><?php echo htmlspecialchars($textoOriginal); ?></textarea>
 
         <label for="idioma">Traduzir para:</label>
         <select id="idioma" name="idioma">
@@ -120,28 +158,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     </form>
 
     <?php if ($resultado): ?>
-        <div class="result-box">
-            <strong>Resultado da Traducao:</strong>
-            <p><?php echo htmlspecialchars($resultado['texto']); ?></p>
-            
-            <?php if ($resultado['cached']): ?>
-                <span class="badge badge-cache">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                    </svg>
-                    Veio do Cache Local (Instantaneo)
-                </span>
-            <?php else: ?>
-                <span class="badge badge-web">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="2" y1="12" x2="22" y2="12"/>
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                    </svg>
-                    Traduzido da Web & Salvo no Cache
-                </span>
-            <?php endif; ?>
-        </div>
+        <?php if (!empty($resultado['erro'])): ?>
+            <div class="error-box">
+                <strong>Aviso:</strong>
+                <p><?php echo htmlspecialchars($resultado['erro']); ?></p>
+                <p><small>Texto original retornado: <?php echo htmlspecialchars($resultado['texto']); ?></small></p>
+            </div>
+        <?php else: ?>
+            <div class="result-box">
+                <strong>Resultado da Traducao:</strong>
+                <p><?php echo htmlspecialchars($resultado['texto']); ?></p>
+                
+                <?php if ($resultado['cached']): ?>
+                    <span class="badge badge-cache">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                        </svg>
+                        Veio do Cache Local (Instantaneo)
+                    </span>
+                <?php else: ?>
+                    <span class="badge badge-web">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Traduzido da Web & Salvo no Cache
+                    </span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 </div>
 

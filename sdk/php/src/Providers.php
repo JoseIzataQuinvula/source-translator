@@ -57,10 +57,20 @@ class GoogleProvider implements TranslationProvider
             throw new \RuntimeException('Empty translation from Google');
         }
 
+        // Validate: translation should differ from original when languages are different
+        if ($this->normalizeText($translated) === $this->normalizeText($text) && $sourceLang !== $targetLang) {
+            throw new \RuntimeException('Translation identical to source - API likely failed');
+        }
+
         return [
             'translated_text' => $translated,
             'provider' => $this->getName(),
         ];
+    }
+
+    private function normalizeText(string $text): string
+    {
+        return mb_strtolower(trim($text));
     }
 }
 
@@ -110,9 +120,19 @@ class BingProvider implements TranslationProvider
             throw new \RuntimeException('Empty translation from Bing');
         }
 
+        // Validate: translation should differ from original when languages are different
+        if ($this->normalizeText($translated) === $this->normalizeText($text) && $sourceLang !== $targetLang) {
+            throw new \RuntimeException('Translation identical to source - API likely failed');
+        }
+
         return [
             'translated_text' => $translated,
             'provider' => $this->getName(),
         ];
+    }
+
+    private function normalizeText(string $text): string
+    {
+        return mb_strtolower(trim($text));
     }
 }
