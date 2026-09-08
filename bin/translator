@@ -89,6 +89,35 @@ switch ($command) {
         }
         break;
 
+    case 'pkg:edit':
+        $lang = $argv[2] ?? null;
+        $id = $argv[3] ?? null;
+        $key = $argv[4] ?? null;
+        $value = $argv[5] ?? null;
+
+        if (!$lang || !$id || !$key || !$value) {
+            echo "Uso: php bin/translator pkg:edit [lang] [id] [key] [value]\n";
+            echo "Exemplo: php bin/translator pkg:edit pt 1001 1001 \"Bom dia\"\n";
+            exit(1);
+        }
+
+        $localesDir = __DIR__ . '/../sdk/php/locales/';
+        $file = $localesDir . strtolower($lang) . '.json';
+
+        if (!file_exists($file)) {
+            echo "Pacote {$lang}.json nao existe. Crie com: pkg:create {$lang}\n";
+            exit(1);
+        }
+
+        $data = json_decode(file_get_contents($file), true) ?: [];
+        $data[$id] = $value;
+        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        auditLog($user, 'EDIT_TERM', "LANG: {$lang} | ID: {$id} | KEY: {$key} | VALUE: \"{$value}\"");
+        echo "Pacote {$lang}.json atualizado!\n";
+        echo "  #{$id} = {$value}\n";
+        break;
+
     case 'term:add':
         $id = $argv[2] ?? null;
         $ptText = $argv[3] ?? null;
@@ -187,6 +216,7 @@ switch ($command) {
         echo "  pkg:list                          Listar pacotes\n";
         echo "  pkg:download [lang]               Baixar pacote remoto\n";
         echo "  pkg:create [lang]                 Criar pacote vazio\n";
+        echo "  pkg:edit [lang] [id] [key] [val]  Editar termo no pacote\n";
         echo "  pkg:publish [lang]                Publicar pacote no GitHub (requer token)\n";
         echo "  term:add [id] [pt] [en]           Adicionar termo\n";
         echo "  term:find [texto]                 Buscar termo\n";

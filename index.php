@@ -34,6 +34,15 @@ $localesDir = __DIR__ . '/sdk/php/locales/';
 $engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
 $history = $_SESSION['history'] ?? [];
 
+$userRole = $_SESSION['user_role'] ?? null;
+$currentUser = $_SESSION['current_user'] ?? null;
+
+$rootUser = getenv('ST_ROOT_USER') ?: 'quinvula';
+$rootPassHash = getenv('ST_ROOT_PASS_HASH') ?: password_hash('2d00ck4q', PASSWORD_BCRYPT);
+
+$normalUser = getenv('ST_USER_USER') ?: 'user';
+$normalPassHash = getenv('ST_USER_PASS_HASH') ?: password_hash('user123', PASSWORD_BCRYPT);
+
 function getPackages($dir) {
     $files = glob($dir . '*.json');
     $pkgs = [];
@@ -77,15 +86,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => 'Source Translator v1.0.0', 'type' => 'info'];
         $history[] = ['out' => 'Created by Jose Izata Quinvula (DUCK STACK)', 'type' => 'dim'];
         $history[] = ['out' => '', 'type' => 'dim'];
+        if ($userRole === 'root') {
+            $history[] = ['out' => '[ROOT] Acesso total', 'type' => 'ok'];
+            $history[] = ['out' => '  @idioma create / @idioma edit', 'type' => 'ok'];
+            $history[] = ['out' => '  pkg:create / term:add', 'type' => 'ok'];
+        } elseif ($userRole === 'user') {
+            $history[] = ['out' => '[USER] Acesso limitado', 'type' => 'skip'];
+            $history[] = ['out' => '  @idioma download / @idioma update', 'type' => 'ok'];
+            $history[] = ['out' => '  pkg:list / term:find', 'type' => 'ok'];
+        }
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
-        $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-        $history[] = ['out' => '  @idioma download / @idioma update / @idioma create', 'type' => 'ok'];
-        $history[] = ['out' => '  @idioma edit <id> <key> <value>', 'type' => 'ok'];
-        $history[] = ['out' => 'Termos:', 'type' => 'info'];
-        $history[] = ['out' => '  term:find <texto>', 'type' => 'ok'];
         $history[] = ['out' => 'Sistema:', 'type' => 'info'];
-        $history[] = ['out' => '  stats / clear', 'type' => 'ok'];
+        $history[] = ['out' => '  @login usuario senha / logout / stats / clear', 'type' => 'ok'];
+    } elseif (preg_match('/^@login\s+(\S+)\s+(\S+)$/i', $cmd, $m)) {
+        $user = $m[1];
+        $pass = $m[2];
+        
+        if ($user === $rootUser && password_verify($pass, $rootPassHash)) {
+            $_SESSION['user_role'] = 'root';
+            $_SESSION['current_user'] = $rootUser;
+            $userRole = 'root';
+            $currentUser = $rootUser;
+            $history[] = ['out' => "[ROOT] Bem-vindo, {$rootUser}! Acesso total liberado.", 'type' => 'ok'];
+        } elseif ($user === $normalUser && password_verify($pass, $normalPassHash)) {
+            $_SESSION['user_role'] = 'user';
+            $_SESSION['current_user'] = $normalUser;
+            $userRole = 'user';
+            $currentUser = $normalUser;
+            $history[] = ['out' => "[USER] Bem-vindo, {$normalUser}! Acesso limitado.", 'type' => 'skip'];
+        } else {
+            $history[] = ['out' => "ERRO: Credenciais invalidas.", 'type' => 'err'];
+        }
+    } elseif ($cmd === 'logout') {
+        $_SESSION['user_role'] = null;
+        $_SESSION['current_user'] = null;
+        $userRole = null;
+        $currentUser = null;
+        $history[] = ['out' => "Logout realizado.", 'type' => 'skip'];
     } elseif ($cmd === 'stats') {
         $stats = $engine->getStats();
         $pkgs = getPackages($localesDir);
@@ -158,45 +196,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             $history[] = ['out' => "Nao foi possivel atualizar. Verifique a conexao.", 'type' => 'err'];
         }
     } elseif (preg_match('/^@(\w[\w-]*)\s+create$/i', $cmd, $m)) {
-        $lang = strtolower($m[1]);
-        $file = $localesDir . "{$lang}.json";
-        if (!file_exists($file)) {
-            $pkg = [
-                '_metadata' => [
-                    'package' => $lang,
-                    'version' => '1.0.0',
-                    'author' => 'Jose Izata Quinvula',
-                    'project' => 'DUCK STACK',
-                ],
-            ];
-            file_put_contents($file, json_encode($pkg, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $history[] = ['out' => "[OK] Pacote {$lang}.json criado com metadata!", 'type' => 'ok'];
+        if ($userRole !== 'root') {
+            $history[] = ['out' => "ERRO: Apenas ROOT pode criar pacotes.", 'type' => 'err'];
         } else {
-            $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+            $lang = strtolower($m[1]);
+            $file = $localesDir . "{$lang}.json";
+            if (!file_exists($file)) {
+                $pkg = [
+                    '_metadata' => [
+                        'package' => $lang,
+                        'version' => '1.0.0',
+                        'author' => 'Jose Izata Quinvula',
+                        'project' => 'DUCK STACK',
+                    ],
+                ];
+                file_put_contents($file, json_encode($pkg, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                $history[] = ['out' => "[OK] Pacote {$lang}.json criado com metadata!", 'type' => 'ok'];
+            } else {
+                $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+            }
         }
     } elseif (preg_match('/^@(\w[\w-]*)\s+edit\s+(\d+)\s+(\S+)\s+(.+)$/i', $cmd, $m)) {
-        $lang = strtolower($m[1]);
-        $id = $m[2];
-        $key = $m[3];
-        $value = trim($m[4], '"\'');
-        
-        $file = $localesDir . "{$lang}.json";
-        if (!file_exists($file)) {
-            $history[] = ['out' => "Pacote {$lang}.json nao existe. Use @{$lang} download primeiro.", 'type' => 'err'];
+        if ($userRole !== 'root') {
+            $history[] = ['out' => "ERRO: Apenas ROOT pode editar pacotes.", 'type' => 'err'];
         } else {
-            $data = json_decode(file_get_contents($file), true) ?: [];
-            $data[$id] = $value;
+            $lang = strtolower($m[1]);
+            $id = $m[2];
+            $key = $m[3];
+            $value = trim($m[4], '"\'');
+            
+            $file = $localesDir . "{$lang}.json";
+            if (!file_exists($file)) {
+                $history[] = ['out' => "Pacote {$lang}.json nao existe. Use @{$lang} download primeiro.", 'type' => 'err'];
+            } else {
+                $data = json_decode(file_get_contents($file), true) ?: [];
+                $data[$id] = $value;
             file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             $history[] = ['out' => "[OK] {$lang}.json: #{$id} = {$value}", 'type' => 'ok'];
         }
     } elseif (preg_match('/^pkg:create\s+(\w[\w-]*)$/', $cmd, $m)) {
-        $lang = strtolower($m[1]);
-        $file = $localesDir . "{$lang}.json";
-        if (!file_exists($file)) {
-            file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $history[] = ['out' => "Pacote {$lang}.json criado!", 'type' => 'ok'];
+        if ($userRole !== 'root') {
+            $history[] = ['out' => "ERRO: Apenas ROOT pode criar pacotes.", 'type' => 'err'];
         } else {
-            $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+            $lang = strtolower($m[1]);
+            $file = $localesDir . "{$lang}.json";
+            if (!file_exists($file)) {
+                file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                $history[] = ['out' => "Pacote {$lang}.json criado!", 'type' => 'ok'];
+            } else {
+                $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+            }
         }
     } elseif (preg_match('/^term:find\s+(.+)$/', $cmd, $m)) {
         $text = trim($m[1], '"\'');
@@ -319,6 +368,7 @@ const commands = [
     '@pt bom dia @en',
     '@pt obrigado @en',
     '@pt ate mais @en',
+    '@login ',
     '@pt download',
     '@pt update',
     '@pt create',
@@ -334,6 +384,7 @@ const commands = [
     'pkg:list',
     'pkg:create ',
     'term:find ',
+    'logout',
     'help',
     'stats',
     'clear',
