@@ -81,10 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
         .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
         #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 300px; z-index: 100; }
-        .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; }
+        .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; color: #aaa; }
         .suggestion:hover, .suggestion.active { background: #333; color: #5cdc5c; }
-        .suggestion .cmd { color: #e5c07b; }
-        .suggestion .desc { color: #666; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -129,30 +127,40 @@ let buffer = '';
 let selectedIdx = -1;
 
 const commands = [
-    { cmd: '@en hello @pt-AO', desc: 'traduzir ingles para pt-AO' },
-    { cmd: '@pt-AO bom dia @en', desc: 'traduzir pt-AO para ingles' },
-    { cmd: '@pt obrigado @en', desc: 'traduzir portugues para ingles' },
-    { cmd: '@en good morning @pt', desc: 'traduzir ingles para portugues' },
-    { cmd: 'help', desc: 'mostrar ajuda' },
-    { cmd: 'stats', desc: 'estatisticas do dicionario' },
-    { cmd: 'clear', desc: 'limpar terminal' },
+    '@en hello @pt-AO',
+    '@en goodbye @pt-AO',
+    '@en good morning @pt-AO',
+    '@en good night @pt-AO',
+    '@en thank you @pt-AO',
+    '@en how are you @pt-AO',
+    '@pt-AO bom dia @en',
+    '@pt-AO obrigado @en',
+    '@pt-AO ate logo @en',
+    '@pt bom dia @en',
+    '@pt obrigado @en',
+    '@pt ate mais @en',
+    'help',
+    'stats',
+    'clear',
 ];
 
 function showSuggestions(filter) {
-    const matches = commands.filter(c => 
-        c.cmd.toLowerCase().includes(filter.toLowerCase())
-    );
-    
-    if (matches.length === 0 || filter.length < 2) {
+    if (!filter) {
         suggestions.style.display = 'none';
         return;
     }
     
-    suggestions.innerHTML = matches.map((c, i) => 
-        '<div class="suggestion" data-cmd="' + c.cmd + '">' +
-        '<span class="cmd">' + c.cmd + '</span>' +
-        '<span class="desc">' + c.desc + '</span>' +
-        '</div>'
+    const matches = commands.filter(c => 
+        c.toLowerCase().startsWith(filter.toLowerCase())
+    );
+    
+    if (matches.length === 0) {
+        suggestions.style.display = 'none';
+        return;
+    }
+    
+    suggestions.innerHTML = matches.map(c => 
+        '<div class="suggestion" data-cmd="' + c + '">' + c + '</div>'
     ).join('');
     
     suggestions.style.display = 'block';
