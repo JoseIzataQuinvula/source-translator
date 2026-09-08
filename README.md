@@ -1,182 +1,100 @@
-# Source Translator
+# Source Translator v1.0.0
 
-Open-source, cache-first translation library for websites, mobile apps, and CLI tools.
+Ultra-fast translation engine based on ID-indexed JSON dictionaries.
 
-**Zero server costs. Zero API keys. Runs locally on your machine.**
+**Author:** Jose Izata Quinvula  
+**Ecosystem:** DUCK STACK  
+**Portfolio:** [joseizataquinvula.pages.dev](https://joseizataquinvula.pages.dev/)  
 
 ---
 
 ![Status](https://img.shields.io/badge/STATUS-Active-brightgreen?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
-
-### Languages
-
 ![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
-![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-
-### Infrastructure
-
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
-![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)
-![Composer](https://img.shields.io/badge/Composer-885630?style=for-the-badge&logo=composer&logoColor=white)
 
 ---
 
-## Supported Languages
+## How It Works
 
-| Code | Language | Default |
-|------|----------|---------|
-| `en` | English | Yes |
-| `pt-AO` | Portuguese (Angola) | Yes |
-| `pt` | Portuguese | Yes |
-| `es` | Spanish | No |
-| `fr` | French | No |
+Source Translator translates content between languages without paid third-party APIs. Translations are performed by direct mapping of **unique IDs** in native JSON package files (`/locales/{lang}.json`).
 
----
+```
+PT: {"1001": "Ola", "1002": "Mundo"}
+EN: {"1001": "Hello", "1002": "World"}
 
-## Features
-
-- **Offline Dictionary:** Indexed word mapping (ID-based) for instant lookups
-- **Smart Filters:** Skip same language, Do Not Translate list, HTML notranslate tags
-- **Segment Translation:** Word-by-word fallback for compound sentences
-- **Cache-First:** Local JSON cache, then web providers
-- **Multi-Provider:** Google, Bing, MyMemory with automatic fallback
-- **Missing Tracker:** Records untranslated words for developer review
-- **Pending Queue:** Offline fallback with automatic retry
+Lookup: PT #1001 -> EN #1001 = "Hello" (0ms)
+```
 
 ---
 
 ## Installation
 
-### PHP
-
 ```bash
-composer require source-translator/php
+git clone https://github.com/JoseIzataQuinvula/source-translator.git
 ```
 
-### Rust
-
-```bash
-cargo add source-translator-sdk
-```
-
-### JavaScript/TypeScript
-
-```bash
-npm install source-translator
-```
-
-### Python
-
-```bash
-pip install source-translator
-```
-
-### Go
-
-```bash
-go get github.com/source-translator/source-translator/sdk/go
-```
-
----
-
-## Usage
-
-### PHP
+### PHP Usage
 
 ```php
-<?php
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/sdk/php/src/SmartEngine.php';
 
 use SourceTranslator\SmartEngine;
 
 $engine = new SmartEngine(['en', 'pt-AO']);
 
-// Basic translation
-$result = $engine->translate('Good morning', 'pt-AO', 'en');
-echo $result['translated_text']; // "Bom dia"
-
-// Sentence with partial dictionary
-$result = $engine->translate('Good morning friend', 'pt-AO', 'en');
-// Returns: "Bom dia friend" (friend not in dictionary)
+$result = $engine->translate('Hello', 'pt-AO', 'en');
+echo $result['translated_text']; // "Ola"
+echo $result['latency_ms'];      // 0
 ```
 
-### Rust
+---
 
-```rust
-use source_translator_sdk::{Translator, TranslateRequest};
+## Features
 
-#[tokio::main]
-async fn main() {
-    let translator = Translator::new().await.unwrap();
+| Feature | Description |
+|---------|-------------|
+| Indexed Dictionary | ID-based word mapping for instant lookups |
+| Smart Filters | Skip same language, Do Not Translate, HTML tags |
+| Segment Translation | Word-by-word fallback for compound sentences |
+| Cache-First | Local JSON cache, then web providers |
+| Multi-Provider | Google, Bing, MyMemory with automatic fallback |
+| Missing Tracker | Records untranslated words for developer review |
+| Auto-Download | Fetches language packages from CDN on demand |
+| Author Protection | Protected terms cannot be translated |
 
-    let result = translator.translate(TranslateRequest {
-        text: "Good morning".to_string(),
-        source_lang: "en".to_string(),
-        target_lang: "pt-AO".to_string(),
-    }).await.unwrap();
+---
 
-    println!("{}", result.translated_text);
-}
+## On-Demand Language Packages
+
+If your project requests a language not in your local `/locales/` folder, the engine automatically downloads the official package from the GitHub repository.
+
+```php
+// Automatically downloads pt.json if not present locally
+$engine->translate('Hello', 'pt', 'en');
 ```
 
-### JavaScript/TypeScript
+---
 
-```typescript
-import { SourceTranslator } from 'source-translator';
+## Running the CLI Panel Locally
 
-const translator = new SourceTranslator();
-
-const result = await translator.translate({
-  text: 'Good morning',
-  sourceLang: 'en',
-  targetLang: 'pt-AO',
-});
-
-console.log(result.translated_text);
+```bash
+php -S localhost:8000 index.php
 ```
 
-### Python
+Access `http://localhost:8000/index.php?key=duckstack2024` in your browser.
 
-```python
-from source_translator import SourceTranslator
+### CLI Commands
 
-translator = SourceTranslator()
-
-result = translator.translate(
-    text='Good morning',
-    source_lang='en',
-    target_lang='pt-AO'
-)
-
-print(result.translated_text)
-```
-
-### Go
-
-```go
-package main
-
-import (
-    "fmt"
-    translator "github.com/source-translator/source-translator/sdk/go"
-)
-
-func main() {
-    t := translator.NewSourceTranslator()
-
-    result, _ := t.Translate(translator.TranslateRequest{
-        Text:       "Good morning",
-        SourceLang: "en",
-        TargetLang: "pt-AO",
-    })
-
-    fmt.Println(result.TranslatedText)
-}
-```
+| Command | Description |
+|---------|-------------|
+| `@en text @pt-AO` | Translate between languages |
+| `pkg:list` | List all language packages |
+| `pkg:create <lang>` | Create new language package |
+| `pkg:download <lang>` | Download package from CDN |
+| `term:find <text>` | Search term across dictionaries |
+| `stats` | Show statistics |
+| `clear` | Clear terminal |
+| `help` | Show help |
 
 ---
 
@@ -186,29 +104,27 @@ func main() {
 Input Text
     |
     v
-[1] Same Language? -> Skip (code 106)
-    |
-    v
-[2] Do Not Translate? -> Preserve (code 107)
-    |
-    v
-[3] HTML notranslate? -> Preserve (code 108)
-    |
-    v
-[4] Indexed Dictionary -> Full match (code 109)
-    |
-    v
-[5] Segment Translation -> Word-by-word (code 109)
-    |
-    v
-[6] Local Cache -> Cached result (code 103)
-    |
-    v
+[1] Same Language? -> Skip
+[2] Do Not Translate? -> Preserve
+[3] HTML notranslate? -> Preserve
+[4] Indexed Dictionary -> Full match (0ms)
+[5] Segment Translation -> Word-by-word
+[6] Local Cache -> Cached result
 [7] Web Providers -> Google/Bing/MyMemory
-    |
-    v
-[8] Offline Fallback -> Pending queue (code 105)
+[8] Offline Fallback -> Pending queue
 ```
+
+---
+
+## Supported Languages
+
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `pt-AO` | Portuguese (Angola) |
+| `pt` | Portuguese |
+| `es` | Spanish |
+| `fr` | French |
 
 ---
 
@@ -218,13 +134,12 @@ Input Text
 |------|-------------|
 | 0 | Success |
 | 101 | Language not supported |
-| 102 | Translation missing |
 | 103 | Cache hit |
 | 104 | Web translated |
 | 105 | Offline fallback |
 | 106 | Same language (skip) |
 | 107 | Do Not Translate (skip) |
-| 108 | HTML notranslate tag (skip) |
+| 108 | HTML notranslate tag |
 | 109 | Segment translation |
 
 ---
@@ -232,3 +147,7 @@ Input Text
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+**Jose Izata Quinvula | DUCK STACK | [joseizataquinvula.pages.dev](https://joseizataquinvula.pages.dev/)**
