@@ -1,9 +1,6 @@
 <?php
 /**
- * Source Translator - Terminal
- * 
- * Comando: @idioma texto @idioma
- * Exemplo: @pt "bom dia" @en
+ * Source Translator - Pure Terminal
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
@@ -16,46 +13,42 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 use SourceTranslator\SmartEngine;
 
 $engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
-$output = [];
+$history = [];
+$cmd = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $cmd = trim($_POST['cmd']);
     
+    if ($cmd === 'clear') {
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+    
+    $history[] = ['cmd' => $cmd];
+    
     if ($cmd === 'help') {
-        $output[] = ['type' => 'info', 'text' => 'Comandos: @idioma texto @idioma'];
-        $output[] = ['type' => 'info', 'text' => 'Exemplo:  @pt "bom dia" @en'];
-        $output[] = ['type' => 'info', 'text' => 'Idiomas:  pt, pt-AO, en'];
-        $output[] = ['type' => 'info', 'text' => 'Stats:    stats'];
+        $history[] = ['out' => 'Comandos:', 'type' => 'info'];
+        $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'info'];
+        $history[] = ['out' => '  stats', 'type' => 'info'];
+        $history[] = ['out' => '  clear', 'type' => 'info'];
     } elseif ($cmd === 'stats') {
         $stats = $engine->getStats();
-        $output[] = ['type' => 'info', 'text' => 'Palavras: ' . $stats['total_words']];
-        $output[] = ['type' => 'info', 'text' => 'Idiomas:  ' . implode(', ', $stats['active_languages'])];
-        $output[] = ['type' => 'info', 'text' => 'Missing:  ' . $stats['missing_words']];
+        $history[] = ['out' => "Palavras: {$stats['total_words']}", 'type' => 'info'];
+        $history[] = ['out' => "Idiomas: " . implode(', ', $stats['active_languages']), 'type' => 'info'];
+        $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'info'];
     } elseif (preg_match('/^@(\w[\w-]*)\s+(.+?)\s+@(\w[\w-]*)$/u', $cmd, $m)) {
-        $source = $m[1];
-        $text = trim($m[2], '"\'');
-        $target = $m[3];
+        $result = $engine->translate(trim($m[2], '"\''), $m[3], $m[1]);
         
-        $result = $engine->translate($text, $target, $source);
+        $labels = [0=>'OK', 101=>'LANG?', 103=>'CACHE', 104=>'WEB', 105=>'OFFLINE', 106=>'SAME', 107=>'DNT', 108=>'SKIP', 109=>'DICT'];
+        $types = [0=>'ok', 101=>'err', 103=>'ok', 104=>'ok', 105=>'err', 106=>'skip', 107=>'skip', 108=>'skip', 109=>'ok'];
         
-        $statusMap = [
-            0 => ['OK', 'success'],
-            101 => ['LANG?', 'error'],
-            103 => ['CACHE', 'info'],
-            104 => ['WEB', 'info'],
-            105 => ['OFFLINE', 'error'],
-            106 => ['SAME', 'warning'],
-            107 => ['DNT', 'warning'],
-            108 => ['SKIP', 'warning'],
-            109 => ['DICT', 'success'],
-        ];
+        $label = $labels[$result['status']] ?? '?';
+        $type = $types[$result['status']] ?? 'info';
         
-        [$label, $type] = $statusMap[$result['status']] ?? ['?', 'info'];
-        
-        $output[] = ['type' => $type, 'text' => "[{$label}] {$result['translated_text']}"];
-        $output[] = ['type' => 'dim', 'text' => "status={$result['status']} provider={$result['provider']} {$result['latency_ms']}ms"];
+        $history[] = ['out' => "[{$label}] {$result['translated_text']}", 'type' => $type];
+        $history[] = ['out' => "  {$result['provider']} {$result['latency_ms']}ms", 'type' => 'dim'];
     } else {
-        $output[] = ['type' => 'error', 'text' => 'Formato invalido. Use: @idioma texto @idioma'];
+        $history[] = ['out' => 'Formato invalido. Use: @idioma texto @idioma', 'type' => 'err'];
     }
 }
 ?>
@@ -66,37 +59,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     <title>source-translator</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; padding: 15px; }
-        .header { color: #5cdc5c; margin-bottom: 15px; }
-        .dim { color: #555; }
-        .success { color: #5cdc5c; }
-        .warning { color: #e5c07b; }
-        .error { color: #e06c75; }
+        body { background: #0c0c0c; color: #aaa; font-family: 'Consolas', monospace; font-size: 14px; padding: 20px; height: 100vh; display: flex; flex-direction: column; }
+        #terminal { flex: 1; overflow-y: auto; padding-bottom: 10px; }
+        .line { margin: 2px 0; white-space: pre-wrap; word-break: break-all; }
+        .dim { color: #444; }
+        .ok { color: #5cdc5c; }
+        .err { color: #e06c75; }
+        .skip { color: #e5c07b; }
         .info { color: #61afef; }
-        .output-line { margin: 4px 0; }
-        .input-form { margin-top: 15px; display: flex; gap: 8px; }
-        .input-form input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 8px 10px; border-radius: 3px; }
-        .input-form input:focus { outline: none; border-color: #5cdc5c; }
-        .input-form button { background: #333; border: 1px solid #555; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 8px 15px; border-radius: 3px; cursor: pointer; }
-        .input-form button:hover { background: #444; }
-        .help { color: #555; font-size: 12px; margin-top: 10px; }
+        .prompt-line { display: flex; align-items: center; margin-top: 10px; }
+        .prompt { color: #5cdc5c; margin-right: 8px; }
+        .cursor { display: inline-block; width: 8px; height: 16px; background: #5cdc5c; animation: blink 1s step-end infinite; vertical-align: middle; }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-<div class="header">source-translator v1.0.0</div>
-<div class="dim">----------------------------------------</div>
+<div id="terminal">
+    <div class="line info">source-translator v1.0.0</div>
+    <div class="line dim">----------------------------------------</div>
+    
+    <?php foreach ($history as $item): ?>
+        <?php if (isset($item['cmd'])): ?>
+            <div class="line"><span class="dim">$</span> <?= htmlspecialchars($item['cmd']) ?></div>
+        <?php else: ?>
+            <div class="line <?= $item['type'] ?>"><?= htmlspecialchars($item['out']) ?></div>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</div>
 
-<?php foreach ($output as $line): ?>
-    <div class="output-line <?= $line['type'] ?>"><?= htmlspecialchars($line['text']) ?></div>
-<?php endforeach; ?>
-
-<form class="input-form" method="POST">
-    <input type="text" name="cmd" placeholder="@pt texto @en" autofocus>
-    <button type="submit">executar</button>
+<form method="POST" id="input-form" style="display:none;">
+    <input type="text" name="cmd" id="cmd-input">
 </form>
 
-<div class="help">@idioma texto @idioma | @pt @pt-AO @en | help | stats</div>
+<div class="prompt-line">
+    <span class="prompt">$</span>
+    <span id="display"></span><span class="cursor"></span>
+</div>
+
+<script>
+const display = document.getElementById('display');
+const input = document.getElementById('cmd-input');
+const form = document.getElementById('input-form');
+let buffer = '';
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        input.value = buffer;
+        form.submit();
+    } else if (e.key === 'Backspace') {
+        buffer = buffer.slice(0, -1);
+        display.textContent = buffer;
+    } else if (e.key.length === 1) {
+        buffer += e.key;
+        display.textContent = buffer;
+    }
+});
+</script>
 
 </body>
 </html>
