@@ -44,9 +44,9 @@ class SourceTranslator
     {
         $start = microtime(true);
 
-        // 1. Try native dictionary first (instant, offline)
+        // 1. Try native indexed dictionary first (instant, offline)
         $nativeResult = $this->nativeEngine->translate($text, $targetLang, $sourceLang);
-        
+
         if ($nativeResult['provider'] === 'native_dictionary') {
             $nativeResult['latency_ms'] = (int) ((microtime(true) - $start) * 1000);
             return $nativeResult;
@@ -215,6 +215,6 @@ class SourceTranslator
 
     public function nativeStats(): array
     {
-        return $this->nativeEngine->getDictionaryStats();
+        return $this->nativeEngine->getIndexedStats();
     }
 }

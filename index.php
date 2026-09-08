@@ -1,11 +1,12 @@
 <?php
 /**
  * Source Translator - Demonstracao em PHP Local
- * Sistema Resiliente com Dicionario Nativo + Cache + Fallback Multi-Provedor
+ * Sistema Resiliente com Dicionario Indexado + Cache + Fallback Multi-Provedor
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
+require_once __DIR__ . '/sdk/php/src/IndexedEngine.php';
 require_once __DIR__ . '/sdk/php/src/NativeEngine.php';
 require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
@@ -72,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         </svg>
         Source Translator (PHP Demo)
     </h1>
-    <p><small>Sistema resiliente com dicionario nativo, cache local e fallback multiprovedor.</small></p>
+    <p><small>Sistema resiliente com dicionario indexado, cache local e fallback multiprovedor.</small></p>
 
     <form method="POST" action="index.php">
         <label for="texto">Texto original (em Portugues):</label>
@@ -100,14 +101,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     <?php if ($resultado): ?>
         <?php if ($resultado['provider'] === 'native_dictionary'): ?>
             <div class="native-box">
-                <strong>Traducao Nativa (Offline)</strong>
+                <strong>Traducao Nativa Indexada (Offline)</strong>
                 <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
                 <span class="badge badge-native">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                         <polyline points="22 4 12 14.01 9 11.01"/>
                     </svg>
-                    Dicionario Nativo (<?php echo $resultado['latency_ms']; ?>ms)
+                    Dicionario Indexado (<?php echo $resultado['latency_ms']; ?>ms)
                 </span>
             </div>
         <?php elseif ($resultado['fallback']): ?>
@@ -157,16 +158,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     <div class="stats">
         <div class="stats-grid">
             <div class="stat-item">
-                <div class="stat-label">Dicionario Nativo</div>
+                <div class="stat-label">Dicionario Indexado</div>
                 <div class="stat-value"><?php echo $translator->nativeStats()['total_words']; ?> palavras</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Idiomas</div>
+                <div class="stat-value"><?php echo $translator->nativeStats()['languages']; ?></div>
             </div>
             <div class="stat-item">
                 <div class="stat-label">Cache Local</div>
                 <div class="stat-value"><?php echo $translator->cacheStats()['total_entries']; ?> traducoes</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Provedores</div>
-                <div class="stat-value">3 ativos</div>
             </div>
             <div class="stat-item">
                 <div class="stat-label">Pendencias</div>

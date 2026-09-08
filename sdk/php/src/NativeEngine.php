@@ -6,52 +6,28 @@ namespace SourceTranslator;
 
 class NativeEngine
 {
-    private string $localesDir;
+    private IndexedEngine $indexedEngine;
     private string $cacheFile;
     private string $pendingFile;
-    private array $dictionary = [];
-    private array $loadedPackages = [];
 
     public function __construct(?string $baseDir = null)
     {
         $dir = $baseDir ?? __DIR__;
-        $this->localesDir = $dir . '/locales/';
+        $this->indexedEngine = new IndexedEngine($dir);
         $this->cacheFile = $dir . '/cache_traducoes.json';
         $this->pendingFile = $dir . '/pending_translations.json';
-    }
-
-    private function loadNativePackage(string $source, string $target): void
-    {
-        $pairKey = strtolower($source . '_' . $target);
-        
-        if (isset($this->loadedPackages[$pairKey])) {
-            return;
-        }
-
-        $this->loadedPackages[$pairKey] = true;
-        $this->dictionary[$pairKey] = [];
-
-        $packagePath = $this->localesDir . $pairKey . '.json';
-        if (file_exists($packagePath)) {
-            $content = file_get_contents($packagePath);
-            $data = json_decode($content, true);
-            if (is_array($data) && isset($data['dictionary'])) {
-                $this->dictionary[$pairKey] = $data['dictionary'];
-            }
-        }
     }
 
     public function translate(string $text, string $targetLang, string $sourceLang = 'pt'): array
     {
         $cleanText = trim($text);
-        $lowerText = mb_strtolower($cleanText, 'UTF-8');
-        $pairKey = strtolower($sourceLang . '_' . $targetLang);
 
-        // 1. Check native dictionary (instant, 100% offline)
-        $this->loadNativePackage($sourceLang, $targetLang);
-        if (isset($this->dictionary[$pairKey][$lowerText])) {
+        // 1. Try indexed dictionary (instant, offline)
+        $indexedResult = $this->indexedEngine->translate($cleanText, $sourceLang, $targetLang);
+
+        if ($indexedResult['found']) {
             return [
-                'translated_text' => $this->dictionary[$pairKey][$lowerText],
+                'translated_text' => $indexedResult['translated_text'],
                 'source_lang' => $sourceLang,
                 'target_lang' => $targetLang,
                 'provider' => 'native_dictionary',
@@ -176,7 +152,6 @@ class NativeEngine
     {
         $pending = $this->loadPending();
 
-        // Check if already pending
         foreach ($pending as $item) {
             if ($item['text'] === $text && $item['target'] === $target) {
                 return;
@@ -218,16 +193,8 @@ class NativeEngine
         return count($this->loadPending());
     }
 
-    public function getDictionaryStats(): array
+    public function getIndexedStats(): array
     {
-        $totalWords = 0;
-        foreach ($this->dictionary as $pair => $words) {
-            $totalWords += count($words);
-        }
-
-        return [
-            'loaded_packages' => count($this->loadedPackages),
-            'total_words' => $totalWords,
-        ];
+        return $this->indexedEngine->getStats();
     }
 }
