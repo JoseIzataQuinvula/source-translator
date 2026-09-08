@@ -1,9 +1,26 @@
 <?php
 /**
- * Source Translator - Pure Terminal + Package Manager
+ * Source Translator v1.0.0
+ * 
+ * @author    Jose Izata Quinvula
+ * @link      https://joseizataquinvula.pages.dev/
+ * @ecosystem DUCK STACK
+ * @license   MIT
  */
 
 session_start();
+
+// Admin protection
+define('ADMIN_KEY', getenv('ST_ADMIN_KEY') ?: 'duckstack2024');
+
+if (isset($_GET['key']) && $_GET['key'] === ADMIN_KEY) {
+    $_SESSION['is_admin'] = true;
+}
+
+if (empty($_SESSION['is_admin'])) {
+    http_response_code(403);
+    die('<html><body style="background:#0c0c0c;color:#e06c75;font-family:monospace;padding:40px;"><h1>403 - Acesso Negado</h1><p>Chave de acesso necessaria: index.php?key=SUA_CHAVE</p></body></html>');
+}
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
@@ -57,21 +74,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $history[] = ['cmd' => $cmd];
     
     if ($cmd === 'help') {
+        $history[] = ['out' => 'Source Translator v1.0.0', 'type' => 'info'];
+        $history[] = ['out' => 'Created by Jose Izata Quinvula (DUCK STACK)', 'type' => 'dim'];
+        $history[] = ['out' => '', 'type' => 'dim'];
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
-        $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'info'];
+        $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
         $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-        $history[] = ['out' => '  pkg:list', 'type' => 'info'];
-        $history[] = ['out' => '  pkg:create <lang>', 'type' => 'info'];
+        $history[] = ['out' => '  pkg:list / pkg:create <lang>', 'type' => 'ok'];
         $history[] = ['out' => 'Termos:', 'type' => 'info'];
-        $history[] = ['out' => '  term:find <texto>', 'type' => 'info'];
+        $history[] = ['out' => '  term:find <texto>', 'type' => 'ok'];
         $history[] = ['out' => 'Sistema:', 'type' => 'info'];
-        $history[] = ['out' => '  stats / clear', 'type' => 'info'];
+        $history[] = ['out' => '  stats / clear', 'type' => 'ok'];
     } elseif ($cmd === 'stats') {
         $stats = $engine->getStats();
         $pkgs = getPackages($localesDir);
         $history[] = ['out' => "Pacotes: " . count($pkgs), 'type' => 'ok'];
         $history[] = ['out' => "Palavras: {$stats['total_words']}", 'type' => 'ok'];
         $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'skip'];
+        $history[] = ['out' => "DNT: {$stats['do_not_translate_count']}", 'type' => 'info'];
     } elseif ($cmd === 'pkg:list') {
         $pkgs = getPackages($localesDir);
         if (empty($pkgs)) {
@@ -147,12 +167,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 350px; z-index: 100; }
         .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; color: #aaa; }
         .suggestion:hover, .suggestion.active { background: #333; color: #5cdc5c; }
+        .author { margin-top: 10px; font-size: 10px; color: #333; }
     </style>
 </head>
 <body>
 
 <div id="terminal">
     <div class="line info">source-translator v1.0.0</div>
+    <div class="line dim">Created by Jose Izata Quinvula (DUCK STACK)</div>
     <div class="line dim">----------------------------------------</div>
     
     <?php foreach ($history as $item): ?>
@@ -182,6 +204,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     <span>help</span>
     <span>clear</span>
 </div>
+
+<div class="author">Jose Izata Quinvula | joseizataquinvula.pages.dev | DUCK STACK</div>
 
 <script>
 const display = document.getElementById('display');

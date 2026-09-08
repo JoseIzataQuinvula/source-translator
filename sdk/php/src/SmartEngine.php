@@ -28,7 +28,10 @@ class SmartEngine
     const STATUS_SENTENCE_TRANSLATED = 109;
 
     private array $doNotTranslate = [
+        'jose izata quinvula',
+        'duck stack',
         'source translator',
+        'joseizataquinvula.pages.dev',
         'github',
         'php',
         'json',
