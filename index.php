@@ -1,7 +1,7 @@
 <?php
 /**
- * Source Translator - Demonstracao em PHP Local
- * Sistema Inteligente com Avisos UX e Codigos de Status
+ * Source Translator - Testes e Demonstracao
+ * Testa todas as funcionalidades do SmartEngine
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
@@ -11,218 +11,183 @@ require_once __DIR__ . '/sdk/php/src/SmartEngine.php';
 require_once __DIR__ . '/sdk/php/src/NativeEngine.php';
 require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
-use SourceTranslator\SourceTranslator;
+use SourceTranslator\SmartEngine;
 
-$translator = new SourceTranslator(['pt', 'en', 'es', 'fr']);
+$engine = new SmartEngine(['pt', 'en', 'es', 'fr'], __DIR__ . '/sdk/php');
 
-$resultado = null;
-$textoOriginal = '';
-$idiomaDestino = 'en';
+$testes = [];
+$testeIndex = 0;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
-    $textoOriginal = $_POST['texto'];
-    $idiomaDestino = $_POST['idioma'];
-    $resultado = $translator->translate($textoOriginal, $idiomaDestino, 'pt');
+function runTest($engine, &$testes, &$testeIndex, $nome, $texto, $target, $source = 'pt') {
+    global $testeIndex;
+    $testeIndex++;
+    $resultado = $engine->translate($texto, $target, $source);
+    $testes[] = [
+        'id' => $testeIndex,
+        'nome' => $nome,
+        'input' => $texto,
+        'output' => $resultado['translated_text'],
+        'status' => $resultado['status'],
+        'status_msg' => $engine->getStatusMessage($resultado['status']),
+        'provider' => $resultado['provider'],
+        'warning' => $resultado['warning'],
+        'latency' => $resultado['latency_ms'],
+    ];
 }
-?>
 
+// Teste 1: Traducao basica
+runTest($engine, $testes, $testeIndex, 'Traducao basica PT->EN', 'bom dia', 'en', 'pt');
+
+// Teste 2: Mesmo idioma
+runTest($engine, $testes, $testeIndex, 'Mesmo idioma (pt->pt)', 'ola', 'pt', 'pt');
+
+// Teste 3: Do Not Translate
+runTest($engine, $testes, $testeIndex, 'Termo DNT (PHP)', 'PHP', 'en', 'pt');
+
+// Teste 4: Tag notranslate HTML
+runTest($engine, $testes, $testeIndex, 'Tag HTML notranslate', '<span translate="no">Source Translator</span>', 'en', 'pt');
+
+// Teste 5: Idioma nao suportado
+runTest($engine, $testes, $testeIndex, 'Idioma nao suportado (de)', 'ola', 'de', 'pt');
+
+// Teste 6: Texto vazio
+runTest($engine, $testes, $testeIndex, 'Texto vazio', '', 'en', 'pt');
+
+// Teste 7: Frase composta (Level 2)
+runTest($engine, $testes, $testeIndex, 'Frase composta (segmentos)', 'bom dia pessoal', 'en', 'pt');
+
+// Teste 8: Palavra que ja existe no destino
+runTest($engine, $testes, $testeIndex, 'Palavra ja existe no destino', 'Hello', 'en', 'pt');
+
+// Teste 9: Traducao PT->ES
+runTest($engine, $testes, $testeIndex, 'Traducao PT->ES', 'bom dia', 'es', 'pt');
+
+// Teste 10: Traducao PT->FR
+runTest($engine, $testes, $testeIndex, 'Traducao PT->FR', 'obrigado', 'fr', 'pt');
+
+// Teste 11: Texto longo com mix
+runTest($engine, $testes, $testeIndex, 'Texto longo misto', 'bom dia PHP esta funcionando', 'en', 'pt');
+
+// Teste 12: Palavra nao encontrada
+runTest($engine, $testes, $testeIndex, 'Palavra ausente', 'xilogravura', 'en', 'pt');
+
+$stats = $engine->getStats();
+$missing = $engine->getMissingWords();
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Source Translator - Demonstracao PHP</title>
+    <title>Source Translator - Testes</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 40px; color: #333; }
-        .container { max-width: 600px; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: 0 auto; }
-        h1 { margin-top: 0; font-size: 22px; color: #111; display: flex; align-items: center; gap: 10px; }
-        h1 svg { width: 28px; height: 28px; }
-        label { display: block; margin-top: 15px; font-weight: bold; }
-        textarea, select, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
-        textarea { height: 100px; resize: vertical; }
-        button { background-color: #0066cc; color: #fff; font-size: 16px; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        button:hover { background-color: #0052a3; }
-        button svg { width: 18px; height: 18px; fill: #fff; }
-        .result-box { margin-top: 25px; padding: 15px; background: #eef6ff; border-left: 4px solid #0066cc; border-radius: 4px; }
-        .native-box { margin-top: 25px; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; }
-        .fallback-box { margin-top: 25px; padding: 15px; background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 4px; }
-        .warning-box { margin-top: 25px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; }
-        .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; margin-top: 10px; }
-        .badge svg { width: 14px; height: 14px; }
-        .badge-native { background: #4caf50; color: #fff; }
-        .badge-native svg { fill: #fff; }
-        .badge-cache { background: #28a745; color: #fff; }
-        .badge-cache svg { fill: #fff; }
-        .badge-web { background: #17a2b8; color: #fff; }
-        .badge-web svg { fill: #fff; }
-        .badge-offline { background: #ff9800; color: #fff; }
-        .badge-offline svg { fill: #fff; }
-        .badge-warning { background: #ffc107; color: #333; }
-        .badge-warning svg { fill: #333; }
-        .stats { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 13px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-item { padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #e0e0e0; }
-        .stat-label { font-size: 11px; color: #666; text-transform: uppercase; }
-        .stat-value { font-size: 18px; font-weight: bold; color: #333; }
-        .stat-value.warning { color: #ff9800; }
-        .status-code { font-family: monospace; font-size: 11px; color: #666; margin-top: 5px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; color: #38bdf8; }
+        .stats-bar { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat { background: #1e293b; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; }
+        .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        .stat-value { font-size: 20px; font-weight: bold; color: #f8fafc; }
+        .stat-value.warn { color: #fbbf24; }
+        .test-card { background: #1e293b; border-radius: 8px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #334155; }
+        .test-card.success { border-left-color: #22c55e; }
+        .test-card.info { border-left-color: #3b82f6; }
+        .test-card.warning { border-left-color: #f59e0b; }
+        .test-card.error { border-left-color: #ef4444; }
+        .test-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .test-name { font-weight: bold; color: #f8fafc; }
+        .test-id { font-size: 12px; color: #64748b; }
+        .test-content { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-bottom: 8px; }
+        .test-box { background: #0f172a; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; }
+        .test-arrow { color: #64748b; font-size: 18px; }
+        .test-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+        .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .badge-success { background: #166534; color: #86efac; }
+        .badge-info { background: #1e40af; color: #93c5fd; }
+        .badge-warning { background: #92400e; color: #fde68a; }
+        .badge-error { background: #991b1b; color: #fca5a5; }
+        .badge-provider { background: #312e81; color: #c4b5fd; }
+        .test-warning { margin-top: 8px; font-size: 12px; color: #fbbf24; font-style: italic; }
+        .test-latency { font-size: 11px; color: #64748b; }
+        .section-title { font-size: 16px; color: #94a3b8; margin: 24px 0 12px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        .missing-list { background: #1e293b; border-radius: 8px; padding: 16px; }
+        .missing-item { padding: 8px 0; border-bottom: 1px solid #334155; font-size: 13px; display: flex; justify-content: space-between; }
+        .missing-item:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        Source Translator (PHP Demo)
-    </h1>
-    <p><small>Sistema inteligente com avisos UX e codigos de status.</small></p>
+    <h1>Source Translator - Suite de Testes</h1>
 
-    <form method="POST" action="index.php">
-        <label for="texto">Texto original (em Portugues):</label>
-        <textarea id="texto" name="texto" placeholder="Bom dia, como voce esta?"><?php echo htmlspecialchars($textoOriginal); ?></textarea>
-
-        <label for="idioma">Traduzir para:</label>
-        <select id="idioma" name="idioma">
-            <option value="en" <?php if($idiomaDestino === 'en') echo 'selected'; ?>>Ingles (English)</option>
-            <option value="es" <?php if($idiomaDestino === 'es') echo 'selected'; ?>>Espanhol (Espanol)</option>
-            <option value="fr" <?php if($idiomaDestino === 'fr') echo 'selected'; ?>>Frances (Francais)</option>
-            <option value="de" <?php if($idiomaDestino === 'de') echo 'selected'; ?>>Alemao (Deutsch)</option>
-            <option value="ja" <?php if($idiomaDestino === 'ja') echo 'selected'; ?>>Japones</option>
-            <option value="pt-AO" <?php if($idiomaDestino === 'pt-AO') echo 'selected'; ?>>Portugues (Angola)</option>
-        </select>
-
-        <button type="submit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14"/>
-                <path d="M12 5l7 7-7 7"/>
-            </svg>
-            Traduzir Agora
-        </button>
-    </form>
-
-    <?php if ($resultado): ?>
-        <?php if ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_SAME_LANGUAGE): ?>
-            <div class="native-box">
-                <strong>Idiomas Iguais</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                <span class="badge badge-native">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    Sem traducao necessaria (<?php echo $resultado['latency_ms']; ?>ms)
-                </span>
-                <div class="status-code">Codigo: 106 - <?php echo $resultado['warning']; ?></div>
-            </div>
-        <?php elseif ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_DO_NOT_TRANSLATE): ?>
-            <div class="native-box">
-                <strong>Termo Protegido</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                <span class="badge badge-native">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    Lista de Nao Traduziveis (<?php echo $resultado['latency_ms']; ?>ms)
-                </span>
-                <div class="status-code">Codigo: 107 - <?php echo $resultado['warning']; ?></div>
-            </div>
-        <?php elseif ($resultado['provider'] === 'native_dictionary'): ?>
-            <div class="native-box">
-                <strong>Traducao Nativa Indexada (Offline)</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                <span class="badge badge-native">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    Dicionario Indexado (<?php echo $resultado['latency_ms']; ?>ms)
-                </span>
-                <div class="status-code">Status: <?php echo $translator->nativeStats()['total_words']; ?> palavras no dicionario</div>
-            </div>
-        <?php elseif ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_LANGUAGE_NOT_SUPPORTED): ?>
-            <div class="warning-box">
-                <strong>Aviso de Idioma</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                <span class="badge badge-warning">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    Idioma nao suportado
-                </span>
-                <div class="status-code">Codigo: 101 - <?php echo $resultado['warning']; ?></div>
-            </div>
-        <?php elseif ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_OFFLINE_FALLBACK): ?>
-            <div class="fallback-box">
-                <strong>Modo Offline Ativo</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                <span class="badge badge-offline">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 1l22 22"/>
-                        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
-                        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
-                        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
-                        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
-                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-                        <line x1="12" y1="20" x2="12.01" y2="20"/>
-                    </svg>
-                    Offline
-                </span>
-                <div class="status-code">Codigo: 105 - <?php echo $resultado['warning']; ?></div>
-            </div>
-        <?php else: ?>
-            <div class="result-box">
-                <strong>Resultado da Traducao:</strong>
-                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
-                
-                <?php if ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_CACHE_HIT): ?>
-                    <span class="badge badge-cache">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                        </svg>
-                        Cache Local (<?php echo $resultado['latency_ms']; ?>ms)
-                    </span>
-                <?php else: ?>
-                    <span class="badge badge-web">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="2" y1="12" x2="22" y2="12"/>
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                        </svg>
-                        <?php echo $resultado['provider']; ?> (<?php echo $resultado['latency_ms']; ?>ms)
-                    </span>
-                <?php endif; ?>
-                <div class="status-code">Status: <?php echo $translator->getStatusMessage($resultado['status']); ?></div>
-            </div>
-        <?php endif; ?>
-    <?php endif; ?>
-
-    <div class="stats">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-label">Dicionario Indexado</div>
-                <div class="stat-value"><?php echo $translator->nativeStats()['total_words']; ?> palavras</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Idiomas Ativos</div>
-                <div class="stat-value"><?php echo count($translator->getActiveLanguages()); ?></div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Cache Local</div>
-                <div class="stat-value"><?php echo $translator->cacheStats()['total_entries']; ?> traducoes</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">Palavras Faltantes</div>
-                <div class="stat-value <?php if($translator->getMissingCount() > 0) echo 'warning'; ?>"><?php echo $translator->getMissingCount(); ?></div>
-            </div>
+    <div class="stats-bar">
+        <div class="stat">
+            <div class="stat-label">Testes</div>
+            <div class="stat-value"><?= count($testes) ?></div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Palavras no Dict</div>
+            <div class="stat-value"><?= $stats['total_words'] ?></div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Idiomas Ativos</div>
+            <div class="stat-value"><?= count($stats['active_languages']) ?></div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">DNT</div>
+            <div class="stat-value"><?= $stats['do_not_translate_count'] ?></div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Missing</div>
+            <div class="stat-value warn"><?= $stats['missing_words'] ?></div>
         </div>
     </div>
+
+    <div class="section-title">Resultados dos Testes</div>
+
+    <?php foreach ($testes as $t): ?>
+        <?php
+            $class = 'info';
+            if (in_array($t['status'], [0, 106, 107, 108, 109])) $class = 'success';
+            elseif ($t['status'] === 101 || $t['status'] === 102) $class = 'warning';
+            elseif ($t['status'] === 105) $class = 'error';
+        ?>
+        <div class="test-card <?= $class ?>">
+            <div class="test-header">
+                <span class="test-name"><?= htmlspecialchars($t['nome']) ?></span>
+                <span class="test-id">#<?= $t['id'] ?></span>
+            </div>
+            <div class="test-content">
+                <div class="test-box"><?= htmlspecialchars($t['input'] ?: '(vazio)') ?></div>
+                <div class="test-arrow">&rarr;</div>
+                <div class="test-box"><?= htmlspecialchars($t['output'] ?: '(vazio)') ?></div>
+            </div>
+            <div class="test-meta">
+                <span class="badge badge-<?= $class ?>"><?= $t['status'] ?> - <?= $t['status_msg'] ?></span>
+                <?php if ($t['provider']): ?>
+                    <span class="badge badge-provider"><?= $t['provider'] ?></span>
+                <?php endif; ?>
+                <span class="test-latency"><?= $t['latency'] ?>ms</span>
+            </div>
+            <?php if ($t['warning']): ?>
+                <div class="test-warning">"><?= htmlspecialchars($t['warning']) ?></div>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+
+    <?php if (!empty($missing)): ?>
+        <div class="section-title">Palavras Ausentes (missing.json)</div>
+        <div class="missing-list">
+            <?php foreach ($missing as $m): ?>
+                <div class="missing-item">
+                    <span><?= htmlspecialchars($m['text']) ?> (<?= $m['source'] ?> &rarr; <?= $m['target'] ?>)</span>
+                    <span>Requisicoes: <?= $m['count'] ?></span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
 </div>
 
 </body>
