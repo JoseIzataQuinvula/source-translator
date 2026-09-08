@@ -175,208 +175,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     <link rel="icon" type="image/png" href="duck-favicon.png">
     <title>source-translator</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            background-color: #0b0c10; 
-            color: #45a29e; 
-            font-family: 'Courier New', monospace; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-        }
-
-        .header { 
-            color: #66fcf1; 
-            margin-bottom: 10px; 
-        }
-
-        .output-container { 
-            flex: 1; 
-            overflow-y: auto; 
-            margin-bottom: 20px; 
-            font-size: 14px; 
-            line-height: 1.5; 
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0c0c0c; color: #aaa; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; padding: 20px; height: 100vh; display: flex; flex-direction: column; }
+        #terminal { flex: 1; overflow-y: auto; padding-bottom: 10px; }
         .line { margin: 2px 0; white-space: pre-wrap; word-break: break-all; }
-        .dim { color: #555e68; }
-        .ok { color: #45a29e; }
+        .dim { color: #444; }
+        .ok { color: #5cdc5c; }
         .err { color: #e06c75; }
         .skip { color: #e5c07b; }
         .info { color: #61afef; }
-
-        .terminal-input-wrapper { 
-            position: relative; 
-            width: 100%; 
-            display: flex;
-            align-items: center;
-            background: #1f2833;
-            border: 1px solid #45a29e;
-            border-radius: 4px;
-            padding: 10px 14px;
-        }
-
-        .terminal-input-wrapper:focus-within {
-            border-color: #66fcf1;
-            box-shadow: 0 0 8px rgba(102, 252, 241, 0.3);
-        }
-
-        .prompt-symbol {
-            color: #66fcf1;
-            margin-right: 8px;
-            font-weight: bold;
-            user-select: none;
-        }
-
-        .field-container {
-            position: relative;
-            flex: 1;
-            display: flex;
-            align-items: center;
-        }
-
-        .ghost-text {
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 100%;
-            color: #555e68;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            pointer-events: none;
-            white-space: pre;
-            display: flex;
-            align-items: center;
-        }
-
-        .cmd-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: #66fcf1;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            outline: none;
-            position: relative;
-            z-index: 2;
-        }
-
-        .cmd-input::placeholder { color: #555e68; }
-
-        .footer { 
-            margin-top: 8px; 
-            font-size: 11px; 
-            color: #444; 
-        }
+        .prompt-line { display: flex; align-items: center; margin-top: 10px; }
+        .prompt { color: #5cdc5c; margin-right: 8px; }
+        .cursor { display: inline-block; width: 8px; height: 16px; background: #5cdc5c; animation: blink 1s step-end infinite; vertical-align: middle; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
+        .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
+        .author { margin-top: 10px; font-size: 10px; color: #333; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div>source-translator v1.0.0</div>
-    <div style="color:#555e68;">Created by Jose Izata Quinvula (DUCK STACK)</div>
-    <div style="color:#333;">----------------------------------------</div>
-</div>
-
-<div class="output-container">
+<div id="terminal">
+    <div class="line info">source-translator v1.0.0</div>
+    <div class="line dim">Created by Jose Izata Quinvula (DUCK STACK)</div>
+    <div class="line dim">----------------------------------------</div>
+    
     <?php foreach ($history as $item): ?>
         <?php if (isset($item['cmd'])): ?>
-            <div class="line"><span class="dim">$ </span><span style="color:#ccc;"><?= htmlspecialchars($item['cmd']) ?></span></div>
+            <div class="line"><span class="dim">$</span> <?= htmlspecialchars($item['cmd']) ?></div>
         <?php else: ?>
             <div class="line <?= $item['type'] ?>"><?= htmlspecialchars($item['out']) ?></div>
         <?php endif; ?>
     <?php endforeach; ?>
 </div>
 
-<div class="terminal-input-wrapper">
-    <span class="prompt-symbol">$</span>
-    <div class="field-container">
-        <div class="ghost-text" id="ghostText"></div>
-        <form method="POST" style="width: 100%; display: flex;" id="cliForm">
-            <input 
-                type="text" 
-                name="cmd" 
-                id="cmdInput" 
-                class="cmd-input" 
-                placeholder="Digite um comando..." 
-                autocomplete="off" 
-                autofocus
-            >
-        </form>
-    </div>
+<form method="POST" id="input-form" style="display:none;">
+    <input type="text" name="cmd" id="cmd-input">
+</form>
+
+<div class="prompt-line">
+    <span class="prompt">$</span>
+    <span id="display"></span><span class="cursor"></span>
 </div>
 
-<div class="footer">
-    Jose Izata Quinvula | joseizataquinvula.pages.dev | DUCK STACK
+<div class="helper-bar">
+    <span>@pt @pt-AO @en</span>
+    <span>@idioma download</span>
+    <span>pkg:list</span>
+    <span>term:find</span>
+    <span>help</span>
+    <span>clear</span>
 </div>
+
+<div class="author">Jose Izata Quinvula | joseizataquinvula.pages.dev | DUCK STACK</div>
 
 <script>
-const dictionary = [
-    '@pt download', '@en download', '@pt-AO download', '@es download', '@fr download',
-    '@en hello @pt-AO', '@en goodbye @pt-AO', '@en good morning @pt-AO',
-    '@en good night @pt-AO', '@en thank you @pt-AO', '@en how are you @pt-AO',
-    '@pt-AO bom dia @en', '@pt-AO obrigado @en', '@pt-AO ate logo @en',
-    '@pt bom dia @en', '@pt obrigado @en', '@pt ate mais @en',
-    'pkg:list', 'pkg:create ', 'term:find ', 'help', 'stats', 'clear'
+const display = document.getElementById('display');
+const input = document.getElementById('cmd-input');
+const form = document.getElementById('input-form');
+let buffer = '';
+
+const commands = [
+    '@en hello @pt-AO',
+    '@en goodbye @pt-AO',
+    '@en good morning @pt-AO',
+    '@en good night @pt-AO',
+    '@en thank you @pt-AO',
+    '@en how are you @pt-AO',
+    '@pt-AO bom dia @en',
+    '@pt-AO obrigado @en',
+    '@pt-AO ate logo @en',
+    '@pt bom dia @en',
+    '@pt obrigado @en',
+    '@pt ate mais @en',
+    '@pt download',
+    '@en download',
+    '@pt-AO download',
+    '@es download',
+    '@fr download',
+    'pkg:list',
+    'pkg:create ',
+    'term:find ',
+    'help',
+    'stats',
+    'clear',
 ];
 
-const input = document.getElementById('cmdInput');
-const ghost = document.getElementById('ghostText');
-let currentSuggestion = '';
-
-input.addEventListener('input', function() {
-    const val = this.value;
-
-    if (!val) {
-        ghost.textContent = '';
-        currentSuggestion = '';
-        return;
+function showSuggestions(filter) {
+    if (!filter || filter.length < 1) {
+        return null;
     }
+    
+    const match = commands.find(c => 
+        c.toLowerCase().indexOf(filter.toLowerCase()) === 0 && c.length > filter.length
+    );
+    
+    return match ? match.slice(filter.length) : null;
+}
 
-    const words = val.split(' ');
-    const lastWord = words[words.length - 1];
-
-    if (!lastWord) {
-        ghost.textContent = val;
-        currentSuggestion = '';
-        return;
-    }
-
-    const match = dictionary.find(item => {
-        const lower = item.toLowerCase();
-        const inputLower = val.toLowerCase();
-        return lower.startsWith(inputLower) && item.length > val.length;
-    });
-
-    if (match) {
-        currentSuggestion = match.slice(val.length);
-        ghost.textContent = val + currentSuggestion;
-    } else {
-        const wordMatch = dictionary.find(item => {
-            return item.toLowerCase().startsWith(lastWord.toLowerCase()) && item.length > lastWord.length;
-        });
-
-        if (wordMatch) {
-            const completion = wordMatch.slice(lastWord.length);
-            currentSuggestion = completion;
-            ghost.textContent = val + completion;
-        } else {
-            ghost.textContent = '';
-            currentSuggestion = '';
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        input.value = buffer;
+        form.submit();
+    } else if (e.key === 'Backspace') {
+        buffer = buffer.slice(0, -1);
+        display.textContent = buffer;
+    } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const suggestion = showSuggestions(buffer);
+        if (suggestion) {
+            buffer += suggestion;
+            display.textContent = buffer;
         }
-    }
-});
-
-input.addEventListener('keydown', function(e) {
-    if ((e.key === 'Tab' || e.key === 'ArrowRight') && currentSuggestion) {
-        if (this.selectionStart === this.value.length) {
-            e.preventDefault();
-            this.value = this.value + currentSuggestion;
-            ghost.textContent = '';
-            currentSuggestion = '';
+    } else if (e.key === 'ArrowRight') {
+        const suggestion = showSuggestions(buffer);
+        if (suggestion && display.textContent.length === buffer.length) {
+            buffer += suggestion;
+            display.textContent = buffer;
         }
+    } else if (e.key.length === 1) {
+        buffer += e.key;
+        display.textContent = buffer;
     }
 });
 </script>
