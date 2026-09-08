@@ -1,18 +1,19 @@
 <?php
 /**
  * Source Translator - Demonstracao em PHP Local
- * Sistema Resiliente com Dicionario Indexado + Cache + Fallback Multi-Provedor
+ * Sistema Inteligente com Dicionario Indexado + missing.json + Fallback
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
 require_once __DIR__ . '/sdk/php/src/IndexedEngine.php';
+require_once __DIR__ . '/sdk/php/src/SmartEngine.php';
 require_once __DIR__ . '/sdk/php/src/NativeEngine.php';
 require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
 use SourceTranslator\SourceTranslator;
 
-$translator = new SourceTranslator();
+$translator = new SourceTranslator(['pt', 'en', 'es', 'fr']);
 
 $resultado = null;
 $textoOriginal = '';
@@ -60,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         .stat-item { padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #e0e0e0; }
         .stat-label { font-size: 11px; color: #666; text-transform: uppercase; }
         .stat-value { font-size: 18px; font-weight: bold; color: #333; }
+        .stat-value.warning { color: #ff9800; }
     </style>
 </head>
 <body>
@@ -73,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         </svg>
         Source Translator (PHP Demo)
     </h1>
-    <p><small>Sistema resiliente com dicionario indexado, cache local e fallback multiprovedor.</small></p>
+    <p><small>Sistema inteligente com dicionario indexado, missing.json e fallback multiprovedor.</small></p>
 
     <form method="POST" action="index.php">
         <label for="texto">Texto original (em Portugues):</label>
@@ -162,16 +164,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
                 <div class="stat-value"><?php echo $translator->nativeStats()['total_words']; ?> palavras</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Idiomas</div>
-                <div class="stat-value"><?php echo $translator->nativeStats()['languages']; ?></div>
+                <div class="stat-label">Idiomas Ativos</div>
+                <div class="stat-value"><?php echo count($translator->getActiveLanguages()); ?></div>
             </div>
             <div class="stat-item">
                 <div class="stat-label">Cache Local</div>
                 <div class="stat-value"><?php echo $translator->cacheStats()['total_entries']; ?> traducoes</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Pendencias</div>
-                <div class="stat-value"><?php echo $translator->getPendingCount(); ?> na fila</div>
+                <div class="stat-label">Palavras Faltantes</div>
+                <div class="stat-value <?php if($translator->getMissingCount() > 0) echo 'warning'; ?>"><?php echo $translator->getMissingCount(); ?></div>
             </div>
         </div>
     </div>

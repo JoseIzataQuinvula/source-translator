@@ -1,0 +1,20 @@
+[
+    {
+        "text": "olá!",
+        "source": "pt",
+        "target": "en",
+        "timestamp": 1788904730
+    },
+    {
+        "text": "teste",
+        "source": "pt",
+        "target": "en",
+        "timestamp": 1788904744
+    },
+    {
+        "text": "bomba",
+        "source": "pt",
+        "target": "en",
+        "timestamp": 1788904761
+    }
+]

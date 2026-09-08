@@ -1,0 +1,29 @@
+{
+    "26a8f36e9e7725c8c80cca6e89c714ceef10bc95e0cee81f0e8c8493c813e544": {
+        "text_hash": "26a8f36e9e7725c8c80cca6e89c714ceef10bc95e0cee81f0e8c8493c813e544",
+        "source_lang": "pt",
+        "target_lang": "en",
+        "original_text": "olá!",
+        "translated_text": "Hello!",
+        "provider": "MyMemory",
+        "created_at": 1788904733
+    },
+    "816245945cbe38dedd98cf93a70bff2e884431b1014c874337cbbf3218d720d3": {
+        "text_hash": "816245945cbe38dedd98cf93a70bff2e884431b1014c874337cbbf3218d720d3",
+        "source_lang": "pt",
+        "target_lang": "en",
+        "original_text": "teste",
+        "translated_text": "test",
+        "provider": "MyMemory",
+        "created_at": 1788904747
+    },
+    "ca74e23fd9d9ba85d7198fc362f4db971c65bd80516bb0528d04076bdfe85442": {
+        "text_hash": "ca74e23fd9d9ba85d7198fc362f4db971c65bd80516bb0528d04076bdfe85442",
+        "source_lang": "pt",
+        "target_lang": "en",
+        "original_text": "bomba",
+        "translated_text": "&&",
+        "provider": "MyMemory",
+        "created_at": 1788904763
+    }
+}

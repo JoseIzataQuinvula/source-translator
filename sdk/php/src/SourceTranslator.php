@@ -27,10 +27,10 @@ class SourceTranslator
         ['code' => 'ar', 'name' => 'Arabic'],
     ];
 
-    public function __construct(?string $baseDir = null, int $maxCacheAge = 86400)
+    public function __construct(array $activeLanguages = ['pt', 'en'], ?string $baseDir = null, int $maxCacheAge = 86400)
     {
         $dir = $baseDir ?? __DIR__;
-        $this->nativeEngine = new NativeEngine($dir);
+        $this->nativeEngine = new NativeEngine($activeLanguages, $dir);
         $this->cache = new Cache($dir, $maxCacheAge);
         $this->pendingFile = $dir . '/pending_translations.json';
         $this->providers = [
@@ -203,6 +203,26 @@ class SourceTranslator
         return count($this->loadPending());
     }
 
+    public function getMissingWords(): array
+    {
+        return $this->nativeEngine->getMissingWords();
+    }
+
+    public function getMissingCount(): int
+    {
+        return $this->nativeEngine->getMissingCount();
+    }
+
+    public function addLanguage(string $lang): void
+    {
+        $this->nativeEngine->addLanguage($lang);
+    }
+
+    public function getActiveLanguages(): array
+    {
+        return $this->nativeEngine->getActiveLanguages();
+    }
+
     public static function getLanguages(): array
     {
         return self::SUPPORTED_LANGUAGES;
@@ -215,6 +235,6 @@ class SourceTranslator
 
     public function nativeStats(): array
     {
-        return $this->nativeEngine->getIndexedStats();
+        return $this->nativeEngine->getStats();
     }
 }
