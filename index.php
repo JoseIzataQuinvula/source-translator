@@ -17,7 +17,6 @@ use SourceTranslator\SmartEngine;
 $engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
 $history = $_SESSION['history'] ?? [];
 
-// PRG: Process POST then redirect
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $cmd = trim($_POST['cmd']);
     
@@ -81,6 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         @keyframes blink { 50% { opacity: 0; } }
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
         .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
+        #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 300px; z-index: 100; }
+        .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; }
+        .suggestion:hover, .suggestion.active { background: #333; color: #5cdc5c; }
+        .suggestion .cmd { color: #e5c07b; }
+        .suggestion .desc { color: #666; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -97,6 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         <?php endif; ?>
     <?php endforeach; ?>
 </div>
+
+<div id="suggestions"></div>
 
 <form method="POST" id="input-form" style="display:none;">
     <input type="text" name="cmd" id="cmd-input">
@@ -118,18 +124,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 const display = document.getElementById('display');
 const input = document.getElementById('cmd-input');
 const form = document.getElementById('input-form');
+const suggestions = document.getElementById('suggestions');
 let buffer = '';
+let selectedIdx = -1;
+
+const commands = [
+    { cmd: '@en hello @pt-AO', desc: 'traduzir ingles para pt-AO' },
+    { cmd: '@pt-AO bom dia @en', desc: 'traduzir pt-AO para ingles' },
+    { cmd: '@pt obrigado @en', desc: 'traduzir portugues para ingles' },
+    { cmd: '@en good morning @pt', desc: 'traduzir ingles para portugues' },
+    { cmd: 'help', desc: 'mostrar ajuda' },
+    { cmd: 'stats', desc: 'estatisticas do dicionario' },
+    { cmd: 'clear', desc: 'limpar terminal' },
+];
+
+function showSuggestions(filter) {
+    const matches = commands.filter(c => 
+        c.cmd.toLowerCase().includes(filter.toLowerCase())
+    );
+    
+    if (matches.length === 0 || filter.length < 2) {
+        suggestions.style.display = 'none';
+        return;
+    }
+    
+    suggestions.innerHTML = matches.map((c, i) => 
+        '<div class="suggestion" data-cmd="' + c.cmd + '">' +
+        '<span class="cmd">' + c.cmd + '</span>' +
+        '<span class="desc">' + c.desc + '</span>' +
+        '</div>'
+    ).join('');
+    
+    suggestions.style.display = 'block';
+    selectedIdx = -1;
+    
+    document.querySelectorAll('.suggestion').forEach(el => {
+        el.onclick = () => {
+            buffer = el.dataset.cmd;
+            display.textContent = buffer;
+            suggestions.style.display = 'none';
+        };
+    });
+}
+
+function updateSelection() {
+    document.querySelectorAll('.suggestion').forEach((el, i) => {
+        el.classList.toggle('active', i === selectedIdx);
+    });
+}
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    const items = document.querySelectorAll('.suggestion');
+    
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIdx = Math.min(selectedIdx + 1, items.length - 1);
+        updateSelection();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIdx = Math.max(selectedIdx - 1, -1);
+        updateSelection();
+    } else if (e.key === 'Tab' && items.length > 0) {
+        e.preventDefault();
+        if (selectedIdx >= 0) {
+            buffer = items[selectedIdx].dataset.cmd;
+        } else {
+            buffer = items[0].dataset.cmd;
+        }
+        display.textContent = buffer;
+        suggestions.style.display = 'none';
+    } else if (e.key === 'Enter') {
+        if (selectedIdx >= 0 && items.length > 0) {
+            buffer = items[selectedIdx].dataset.cmd;
+        }
         input.value = buffer;
         form.submit();
+    } else if (e.key === 'Escape') {
+        suggestions.style.display = 'none';
     } else if (e.key === 'Backspace') {
         buffer = buffer.slice(0, -1);
         display.textContent = buffer;
+        showSuggestions(buffer);
     } else if (e.key.length === 1) {
         buffer += e.key;
         display.textContent = buffer;
+        showSuggestions(buffer);
     }
 });
 </script>
