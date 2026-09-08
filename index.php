@@ -286,7 +286,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 </div>
 
 <div class="helper-bar">
-    <span>@pt @pt-AO @en</span>
+    <span>@pt</span>
+    <span>@pt-AO</span>
+    <span>@en</span>
     <span>@idioma download</span>
     <span>@idioma update</span>
     <span>pkg:list</span>
