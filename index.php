@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $translations[] = "@{$otherLang} ({$otherInfo['count']} palavras{$connDate})";
                 }
             }
-            $transStr = !empty($translations) ? " traduzidoes: " . implode('; ', $translations) : "";
+            $transStr = !empty($translations) ? " traducoes: " . implode('; ', $translations) : "";
             $history[] = ['out' => "  @{$lang}  ({$info['count']} palavras{$dateStr}){$transStr}", 'type' => 'ok'];
         }
         
