@@ -144,9 +144,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                 $count = count($data);
                 $total += $count;
                 $modified = date('Y-m-d H:i', filemtime($f));
-                $history[] = ['out' => "  [{$lang}] {$count} termos | Ultima atualizacao: {$modified}", 'type' => 'ok'];
+                $history[] = ['out' => "", 'type' => 'ok'];
+                $history[] = ['out' => "  @{$lang}", 'type' => 'info'];
+                $history[] = ['out' => "  Termos: {$count} | Modificado: {$modified}", 'type' => 'ok'];
+                $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
+                foreach ($data as $id => $val) {
+                    if (!is_string($val)) continue;
+                    $preview = mb_strlen($val) > 40 ? mb_substr($val, 0, 40) . '...' : $val;
+                    $history[] = ['out' => "    [{$id}] {$preview}", 'type' => 'dim'];
+                }
             }
-            $history[] = ['out' => "-------------------", 'type' => 'dim'];
+            $history[] = ['out' => "", 'type' => 'ok'];
             $history[] = ['out' => "Total: " . count($files) . " pacotes, {$total} termos", 'type' => 'info'];
         }
     } elseif ($cmd === 'pkg:list') {
