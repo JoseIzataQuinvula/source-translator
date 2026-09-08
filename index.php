@@ -80,7 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
         $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-        $history[] = ['out' => '  @idioma download / @idioma update / pkg:list', 'type' => 'ok'];
+        $history[] = ['out' => '  @idioma download / @idioma update / @idioma create', 'type' => 'ok'];
+        $history[] = ['out' => '  @idioma edit <id> <key> <value>', 'type' => 'ok'];
         $history[] = ['out' => 'Termos:', 'type' => 'info'];
         $history[] = ['out' => '  term:find <texto>', 'type' => 'ok'];
         $history[] = ['out' => 'Sistema:', 'type' => 'info'];
@@ -155,6 +156,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             }
         } else {
             $history[] = ['out' => "Nao foi possivel atualizar. Verifique a conexao.", 'type' => 'err'];
+        }
+    } elseif (preg_match('/^@(\w[\w-]*)\s+create$/i', $cmd, $m)) {
+        $lang = strtolower($m[1]);
+        $file = $localesDir . "{$lang}.json";
+        if (!file_exists($file)) {
+            $pkg = [
+                '_metadata' => [
+                    'package' => $lang,
+                    'version' => '1.0.0',
+                    'author' => 'Jose Izata Quinvula',
+                    'project' => 'DUCK STACK',
+                ],
+            ];
+            file_put_contents($file, json_encode($pkg, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $history[] = ['out' => "[OK] Pacote {$lang}.json criado com metadata!", 'type' => 'ok'];
+        } else {
+            $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+        }
+    } elseif (preg_match('/^@(\w[\w-]*)\s+edit\s+(\d+)\s+(\S+)\s+(.+)$/i', $cmd, $m)) {
+        $lang = strtolower($m[1]);
+        $id = $m[2];
+        $key = $m[3];
+        $value = trim($m[4], '"\'');
+        
+        $file = $localesDir . "{$lang}.json";
+        if (!file_exists($file)) {
+            $history[] = ['out' => "Pacote {$lang}.json nao existe. Use @{$lang} download primeiro.", 'type' => 'err'];
+        } else {
+            $data = json_decode(file_get_contents($file), true) ?: [];
+            $data[$id] = $value;
+            file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $history[] = ['out' => "[OK] {$lang}.json: #{$id} = {$value}", 'type' => 'ok'];
         }
     } elseif (preg_match('/^pkg:create\s+(\w[\w-]*)$/', $cmd, $m)) {
         $lang = strtolower($m[1]);
@@ -286,10 +319,16 @@ const commands = [
     '@pt ate mais @en',
     '@pt download',
     '@pt update',
+    '@pt create',
+    '@pt edit ',
     '@en download',
     '@en update',
+    '@en create',
+    '@en edit ',
     '@pt-AO download',
     '@pt-AO update',
+    '@pt-AO create',
+    '@pt-AO edit ',
     'pkg:list',
     'pkg:create ',
     'term:find ',
