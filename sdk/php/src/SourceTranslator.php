@@ -6,12 +6,14 @@ namespace SourceTranslator;
 
 class SourceTranslator
 {
+    private NativeEngine $nativeEngine;
     private Cache $cache;
     private array $providers;
     private string $pendingFile;
 
     private const SUPPORTED_LANGUAGES = [
         ['code' => 'en', 'name' => 'English'],
+        ['code' => 'pt', 'name' => 'Portuguese'],
         ['code' => 'pt-BR', 'name' => 'Portuguese (Brazil)'],
         ['code' => 'pt-AO', 'name' => 'Portuguese (Angola)'],
         ['code' => 'pt-PT', 'name' => 'Portuguese (Portugal)'],
@@ -25,10 +27,12 @@ class SourceTranslator
         ['code' => 'ar', 'name' => 'Arabic'],
     ];
 
-    public function __construct(?string $cacheDir = null, int $maxCacheAge = 86400)
+    public function __construct(?string $baseDir = null, int $maxCacheAge = 86400)
     {
-        $this->cache = new Cache($cacheDir, $maxCacheAge);
-        $this->pendingFile = ($cacheDir ?? getenv('HOME') . '/.source-translator') . '/pending_translations.json';
+        $dir = $baseDir ?? __DIR__;
+        $this->nativeEngine = new NativeEngine($dir);
+        $this->cache = new Cache($dir, $maxCacheAge);
+        $this->pendingFile = $dir . '/pending_translations.json';
         $this->providers = [
             new GoogleProvider(),
             new BingProvider(),
@@ -36,11 +40,19 @@ class SourceTranslator
         ];
     }
 
-    public function translate(string $text, string $sourceLang, string $targetLang): array
+    public function translate(string $text, string $targetLang, string $sourceLang = 'pt'): array
     {
         $start = microtime(true);
 
-        // 1. Check cache first (works offline)
+        // 1. Try native dictionary first (instant, offline)
+        $nativeResult = $this->nativeEngine->translate($text, $targetLang, $sourceLang);
+        
+        if ($nativeResult['provider'] === 'native_dictionary') {
+            $nativeResult['latency_ms'] = (int) ((microtime(true) - $start) * 1000);
+            return $nativeResult;
+        }
+
+        // 2. Check cache
         $cached = $this->cache->get($text, $targetLang);
         if ($cached !== null) {
             return [
@@ -50,11 +62,12 @@ class SourceTranslator
                 'provider' => $cached['provider'],
                 'cached' => true,
                 'fallback' => false,
+                'offline' => false,
                 'latency_ms' => (int) ((microtime(true) - $start) * 1000),
             ];
         }
 
-        // 2. Try each provider with fallback
+        // 3. Try web providers with fallback
         foreach ($this->providers as $provider) {
             try {
                 $result = $provider->translate($text, $sourceLang, $targetLang);
@@ -81,6 +94,7 @@ class SourceTranslator
                     'provider' => $result['provider'],
                     'cached' => false,
                     'fallback' => false,
+                    'offline' => false,
                     'latency_ms' => (int) ((microtime(true) - $start) * 1000),
                 ];
             } catch (\Exception $e) {
@@ -89,10 +103,10 @@ class SourceTranslator
             }
         }
 
-        // 3. All providers failed - save to pending queue for later
+        // 4. All providers failed - add to pending queue
         $this->addToPending($text, $sourceLang, $targetLang);
 
-        // 4. Return original text with fallback flag (no ugly error)
+        // 5. Return original text with fallback flag
         return [
             'translated_text' => $text,
             'source_lang' => $sourceLang,
@@ -100,6 +114,7 @@ class SourceTranslator
             'provider' => 'offline',
             'cached' => false,
             'fallback' => true,
+            'offline' => true,
             'latency_ms' => (int) ((microtime(true) - $start) * 1000),
         ];
     }
@@ -111,8 +126,8 @@ class SourceTranslator
         foreach ($texts as $request) {
             $results[] = $this->translate(
                 $request['text'],
-                $request['source_lang'],
-                $request['target_lang']
+                $request['target_lang'],
+                $request['source_lang'] ?? 'pt'
             );
         }
 
@@ -130,7 +145,7 @@ class SourceTranslator
         $remaining = [];
 
         foreach ($pending as $item) {
-            $result = $this->translate($item['text'], $item['source_lang'], $item['target_lang']);
+            $result = $this->translate($item['text'], $item['target'], $item['source']);
 
             if (!$result['fallback']) {
                 $processed++;
@@ -147,18 +162,17 @@ class SourceTranslator
     {
         $pending = $this->loadPending();
 
-        // Check if already pending
         foreach ($pending as $item) {
-            if ($item['text'] === $text && $item['target_lang'] === $targetLang) {
+            if ($item['text'] === $text && $item['target'] === $targetLang) {
                 return;
             }
         }
 
         $pending[] = [
             'text' => $text,
-            'source_lang' => $sourceLang,
-            'target_lang' => $targetLang,
-            'added_at' => time(),
+            'source' => $sourceLang,
+            'target' => $targetLang,
+            'timestamp' => time(),
         ];
 
         $this->savePending($pending);
@@ -178,11 +192,6 @@ class SourceTranslator
 
     private function savePending(array $pending): void
     {
-        $dir = dirname($this->pendingFile);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
         file_put_contents(
             $this->pendingFile,
             json_encode($pending, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
@@ -202,5 +211,10 @@ class SourceTranslator
     public function cacheStats(): array
     {
         return $this->cache->stats();
+    }
+
+    public function nativeStats(): array
+    {
+        return $this->nativeEngine->getDictionaryStats();
     }
 }

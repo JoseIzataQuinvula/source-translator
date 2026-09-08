@@ -1,11 +1,12 @@
 <?php
 /**
  * Source Translator - Demonstracao em PHP Local
- * Sistema Resiliente com Cache + Fallback Multi-Provedor
+ * Sistema Resiliente com Dicionario Nativo + Cache + Fallback Multi-Provedor
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
+require_once __DIR__ . '/sdk/php/src/NativeEngine.php';
 require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
 use SourceTranslator\SourceTranslator;
@@ -41,9 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         button:hover { background-color: #0052a3; }
         button svg { width: 18px; height: 18px; fill: #fff; }
         .result-box { margin-top: 25px; padding: 15px; background: #eef6ff; border-left: 4px solid #0066cc; border-radius: 4px; }
+        .native-box { margin-top: 25px; padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; }
         .fallback-box { margin-top: 25px; padding: 15px; background: #fff8e1; border-left: 4px solid #ff9800; border-radius: 4px; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; margin-top: 10px; }
         .badge svg { width: 14px; height: 14px; }
+        .badge-native { background: #4caf50; color: #fff; }
+        .badge-native svg { fill: #fff; }
         .badge-cache { background: #28a745; color: #fff; }
         .badge-cache svg { fill: #fff; }
         .badge-web { background: #17a2b8; color: #fff; }
@@ -51,6 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         .badge-offline { background: #ff9800; color: #fff; }
         .badge-offline svg { fill: #fff; }
         .stats { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 13px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-item { padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #e0e0e0; }
+        .stat-label { font-size: 11px; color: #666; text-transform: uppercase; }
+        .stat-value { font-size: 18px; font-weight: bold; color: #333; }
     </style>
 </head>
 <body>
@@ -64,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
         </svg>
         Source Translator (PHP Demo)
     </h1>
-    <p><small>Sistema resiliente com cache local e fallback multiprovedor.</small></p>
+    <p><small>Sistema resiliente com dicionario nativo, cache local e fallback multiprovedor.</small></p>
 
     <form method="POST" action="index.php">
         <label for="texto">Texto original (em Portugues):</label>
@@ -90,10 +98,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     </form>
 
     <?php if ($resultado): ?>
-        <?php if ($resultado['fallback']): ?>
+        <?php if ($resultado['provider'] === 'native_dictionary'): ?>
+            <div class="native-box">
+                <strong>Traducao Nativa (Offline)</strong>
+                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
+                <span class="badge badge-native">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Dicionario Nativo (<?php echo $resultado['latency_ms']; ?>ms)
+                </span>
+            </div>
+        <?php elseif ($resultado['fallback']): ?>
             <div class="fallback-box">
                 <strong>Modo Offline Ativo</strong>
-                <p>Todos os servicos de traducao estao temporariamente indisponiveis. O texto original foi mantido.</p>
+                <p>Todos os servicos de traducao estao temporariamente indisponiveis.</p>
                 <p><small>O texto foi salvo na fila de pendencias e sera traduzido automaticamente quando os servicos voltarem.</small></p>
                 <span class="badge badge-offline">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -135,9 +155,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     <?php endif; ?>
 
     <div class="stats">
-        <strong>Provedores ativos:</strong> Google, Bing, MyMemory<br>
-        <strong>Cache:</strong> <?php echo $translator->cacheStats()['total_entries']; ?> traducoes salvas<br>
-        <strong>Pendencias:</strong> <?php echo $translator->getPendingCount(); ?> traducoes na fila
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-label">Dicionario Nativo</div>
+                <div class="stat-value"><?php echo $translator->nativeStats()['total_words']; ?> palavras</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Cache Local</div>
+                <div class="stat-value"><?php echo $translator->cacheStats()['total_entries']; ?> traducoes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Provedores</div>
+                <div class="stat-value">3 ativos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Pendencias</div>
+                <div class="stat-value"><?php echo $translator->getPendingCount(); ?> na fila</div>
+            </div>
+        </div>
     </div>
 </div>
 
