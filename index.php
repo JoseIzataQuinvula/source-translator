@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
         .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
         #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 350px; z-index: 100; }
-        .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; color: #aaa; }
+        .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; color: #aaa; font-family: 'Courier New', 'Consolas', monospace; }
         .suggestion:hover, .suggestion.active { background: #333; color: #5cdc5c; }
         .author { margin-top: 10px; font-size: 10px; color: #333; }
     </style>
@@ -256,6 +256,7 @@ const commands = [
     '@pt ate mais @en',
     'pkg:list',
     'pkg:create ',
+    'pkg:download ',
     'term:find ',
     'help',
     'stats',
@@ -263,13 +264,13 @@ const commands = [
 ];
 
 function showSuggestions(filter) {
-    if (!filter) {
+    if (!filter || filter.length < 1) {
         suggestions.style.display = 'none';
         return;
     }
     
     const matches = commands.filter(c => 
-        c.toLowerCase().startsWith(filter.toLowerCase())
+        c.toLowerCase().indexOf(filter.toLowerCase()) === 0
     );
     
     if (matches.length === 0) {
@@ -277,20 +278,19 @@ function showSuggestions(filter) {
         return;
     }
     
-    suggestions.innerHTML = matches.map(c => 
-        '<div class="suggestion" data-cmd="' + c + '">' + c + '</div>'
-    ).join('');
-    
+    let html = '';
+    for (let i = 0; i < matches.length; i++) {
+        html += '<div class="suggestion" onclick="selectCmd(this)" data-cmd="' + matches[i] + '">' + matches[i] + '</div>';
+    }
+    suggestions.innerHTML = html;
     suggestions.style.display = 'block';
     selectedIdx = -1;
-    
-    document.querySelectorAll('.suggestion').forEach(el => {
-        el.onclick = () => {
-            buffer = el.dataset.cmd;
-            display.textContent = buffer;
-            suggestions.style.display = 'none';
-        };
-    });
+}
+
+function selectCmd(el) {
+    buffer = el.getAttribute('data-cmd');
+    display.textContent = buffer;
+    suggestions.style.display = 'none';
 }
 
 function updateSelection() {
