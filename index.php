@@ -12,7 +12,7 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
 use SourceTranslator\SmartEngine;
 
-$engine = new SmartEngine(['pt', 'en', 'es', 'fr'], __DIR__ . '/sdk/php');
+$engine = new SmartEngine(['en', 'pt-AO'], __DIR__ . '/sdk/php');
 $resultado = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
 
     <div class="line"><span class="prompt">$</span> <span class="cmd">help</span></div>
     <div class="line output">Comandos: traduzir &lt;texto&gt; &lt;de&gt; &lt;para&gt;</div>
-    <div class="line output">Idiomas:  pt, en, es, fr</div>
+    <div class="line output">Idiomas:  en, pt-AO</div>
     <div class="line separator"></div>
 
     <form method="POST">
@@ -89,23 +89,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
             <span class="prompt">$</span>
             <input type="text" name="texto" placeholder="digite o texto..." required autofocus>
             <select name="source">
-                <option value="pt">pt</option>
                 <option value="en">en</option>
-                <option value="es">es</option>
-                <option value="fr">fr</option>
+                <option value="pt-AO">pt-AO</option>
             </select>
             <span class="dim">-></span>
             <select name="target">
+                <option value="pt-AO">pt-AO</option>
                 <option value="en">en</option>
-                <option value="pt">pt</option>
-                <option value="es">es</option>
-                <option value="fr">fr</option>
             </select>
             <button type="submit">executar</button>
         </div>
     </form>
 
-    <div class="help">Enter para traduzir | pt=portugues en=ingles es=espanhol fr=frances</div>
+    <div class="help">Enter para traduzir | en=english pt-AO=portugues angola</div>
 </div>
 
 </body>

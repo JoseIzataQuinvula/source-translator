@@ -1,6 +1,6 @@
 # Source Translator
 
-An open-source, cache-first translation library designed to make i18n completely free for websites, mobile apps, and CLI tools.
+Open-source, cache-first translation library for websites, mobile apps, and CLI tools.
 
 **Zero server costs. Zero API keys. Runs locally on your machine.**
 
@@ -11,35 +11,51 @@ An open-source, cache-first translation library designed to make i18n completely
 
 ### Languages
 
+![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
 
-### Tools & Infrastructure
+### Infrastructure
 
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)
-![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
-![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
-![PyPI](https://img.shields.io/badge/PyPI-3775A9?style=for-the-badge&logo=pypi&logoColor=white)
-![crates.io](https://img.shields.io/badge/crates.io-FFA740?style=for-the-badge&logo=rust&logoColor=white)
 ![Composer](https://img.shields.io/badge/Composer-885630?style=for-the-badge&logo=composer&logoColor=white)
 
 ---
 
-## Key Features
+## Supported Languages
 
-- **100% Free & Open Source:** No paid API keys or hidden costs.
-- **Local Cache-First:** SQLite (Rust) or JSON (JS/Python/Go/PHP) cache stored locally.
-- **Multi-Provider Engine:** Automatic fallback between free web translation engines (Google, Bing).
-- **Privacy-First:** Your data never leaves your machine.
-- **Universal SDK:** Works in Web, Mobile, Backend, and CLI applications.
+| Code | Language | Default |
+|------|----------|---------|
+| `en` | English | Yes |
+| `pt-AO` | Portuguese (Angola) | Yes |
+| `pt` | Portuguese | Yes |
+| `es` | Spanish | No |
+| `fr` | French | No |
+
+---
+
+## Features
+
+- **Offline Dictionary:** Indexed word mapping (ID-based) for instant lookups
+- **Smart Filters:** Skip same language, Do Not Translate list, HTML notranslate tags
+- **Segment Translation:** Word-by-word fallback for compound sentences
+- **Cache-First:** Local JSON cache, then web providers
+- **Multi-Provider:** Google, Bing, MyMemory with automatic fallback
+- **Missing Tracker:** Records untranslated words for developer review
+- **Pending Queue:** Offline fallback with automatic retry
 
 ---
 
 ## Installation
+
+### PHP
+
+```bash
+composer require source-translator/php
+```
 
 ### Rust
 
@@ -65,15 +81,28 @@ pip install source-translator
 go get github.com/source-translator/source-translator/sdk/go
 ```
 
-### PHP
-
-```bash
-composer require source-translator/php
-```
-
 ---
 
 ## Usage
+
+### PHP
+
+```php
+<?php
+require_once 'vendor/autoload.php';
+
+use SourceTranslator\SmartEngine;
+
+$engine = new SmartEngine(['en', 'pt-AO']);
+
+// Basic translation
+$result = $engine->translate('Good morning', 'pt-AO', 'en');
+echo $result['translated_text']; // "Bom dia"
+
+// Sentence with partial dictionary
+$result = $engine->translate('Good morning friend', 'pt-AO', 'en');
+// Returns: "Bom dia friend" (friend not in dictionary)
+```
 
 ### Rust
 
@@ -85,14 +114,12 @@ async fn main() {
     let translator = Translator::new().await.unwrap();
 
     let result = translator.translate(TranslateRequest {
-        text: "Hello, World!".to_string(),
+        text: "Good morning".to_string(),
         source_lang: "en".to_string(),
-        target_lang: "pt-BR".to_string(),
+        target_lang: "pt-AO".to_string(),
     }).await.unwrap();
 
-    println!("Translation: {}", result.translated_text);
-    println!("Provider: {}", result.provider);
-    println!("From cache: {}", result.cached);
+    println!("{}", result.translated_text);
 }
 ```
 
@@ -104,13 +131,12 @@ import { SourceTranslator } from 'source-translator';
 const translator = new SourceTranslator();
 
 const result = await translator.translate({
-  text: 'Hello, World!',
+  text: 'Good morning',
   sourceLang: 'en',
-  targetLang: 'pt-BR',
+  targetLang: 'pt-AO',
 });
 
 console.log(result.translated_text);
-console.log(result.cached);
 ```
 
 ### Python
@@ -121,13 +147,12 @@ from source_translator import SourceTranslator
 translator = SourceTranslator()
 
 result = translator.translate(
-    text='Hello, World!',
+    text='Good morning',
     source_lang='en',
-    target_lang='pt-BR'
+    target_lang='pt-AO'
 )
 
 print(result.translated_text)
-print(result.cached)
 ```
 
 ### Go
@@ -143,35 +168,14 @@ import (
 func main() {
     t := translator.NewSourceTranslator()
 
-    result, err := t.Translate(translator.TranslateRequest{
-        Text:       "Hello, World!",
+    result, _ := t.Translate(translator.TranslateRequest{
+        Text:       "Good morning",
         SourceLang: "en",
-        TargetLang: "pt-BR",
+        TargetLang: "pt-AO",
     })
 
-    if err != nil {
-        panic(err)
-    }
-
     fmt.Println(result.TranslatedText)
-    fmt.Println(result.Cached)
 }
-```
-
-### PHP
-
-```php
-<?php
-require_once 'vendor/autoload.php';
-
-use SourceTranslator\SourceTranslator;
-
-$translator = new SourceTranslator();
-
-$result = $translator->translate('Hello, World!', 'en', 'pt-BR');
-
-echo $result['translated_text'] . "\n";
-echo $result['cached'] ? 'true' : 'false';
 ```
 
 ---
@@ -179,45 +183,51 @@ echo $result['cached'] ? 'true' : 'false';
 ## Architecture
 
 ```
-+---------------------------------------------------------------+
-|                   Your Application                            |
-+---------------------------------------------------------------+
-                              |
-                              v
-+---------------------------------------------------------------+
-|              Source Translator (Local Library)                |
-|                                                               |
-|  1. Check Local Cache (SQLite / JSON)                         |
-|  2. If miss -> Call Google/Bing directly                      |
-|  3. Save to Local Cache                                       |
-|  4. Return result                                             |
-+---------------------------------------------------------------+
+Input Text
+    |
+    v
+[1] Same Language? -> Skip (code 106)
+    |
+    v
+[2] Do Not Translate? -> Preserve (code 107)
+    |
+    v
+[3] HTML notranslate? -> Preserve (code 108)
+    |
+    v
+[4] Indexed Dictionary -> Full match (code 109)
+    |
+    v
+[5] Segment Translation -> Word-by-word (code 109)
+    |
+    v
+[6] Local Cache -> Cached result (code 103)
+    |
+    v
+[7] Web Providers -> Google/Bing/MyMemory
+    |
+    v
+[8] Offline Fallback -> Pending queue (code 105)
 ```
 
 ---
 
-## Supported Languages
+## Status Codes
 
-| Code  | Language            |
-|-------|---------------------|
-| `en`  | English             |
-| `pt-BR` | Portuguese (Brazil) |
-| `pt-AO` | Portuguese (Angola) |
-| `pt-PT` | Portuguese (Portugal) |
-| `es`  | Spanish             |
-| `fr`  | French              |
-| `de`  | German              |
-| `ja`  | Japanese            |
-| `ko`  | Korean              |
-| `zh-CN` | Chinese (Simplified) |
-| `ru`  | Russian             |
-| `ar`  | Arabic              |
+| Code | Description |
+|------|-------------|
+| 0 | Success |
+| 101 | Language not supported |
+| 102 | Translation missing |
+| 103 | Cache hit |
+| 104 | Web translated |
+| 105 | Offline fallback |
+| 106 | Same language (skip) |
+| 107 | Do Not Translate (skip) |
+| 108 | HTML notranslate tag (skip) |
+| 109 | Segment translation |
 
 ---
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
 
 ## License
 
