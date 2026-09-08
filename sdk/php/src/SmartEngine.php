@@ -22,6 +22,35 @@ class SmartEngine
     const STATUS_CACHE_HIT = 103;
     const STATUS_WEB_TRANSLATED = 104;
     const STATUS_OFFLINE_FALLBACK = 105;
+    const STATUS_SAME_LANGUAGE = 106;
+    const STATUS_DO_NOT_TRANSLATE = 107;
+
+    private array $doNotTranslate = [
+        'source translator',
+        'github',
+        'php',
+        'json',
+        'sqlite',
+        'kwanza',
+        'javascript',
+        'typescript',
+        'python',
+        'docker',
+        'redis',
+        'postgresql',
+        'mysql',
+        'linux',
+        'windows',
+        'macos',
+        'html',
+        'css',
+        'api',
+        'rest',
+        'graphql',
+        'npm',
+        'composer',
+        'cargo',
+    ];
 
     public function __construct(array $activeLanguages = ['pt', 'en'], ?string $baseDir = null)
     {
@@ -90,6 +119,32 @@ class SmartEngine
         $sourceLang = strtolower($sourceLang);
         $targetLang = strtolower($targetLang);
 
+        // RULE A: Same language - no translation needed
+        if ($sourceLang === $targetLang) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_SAME_LANGUAGE,
+                'Idiomas de origem e destino sao identicos.',
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
+        // RULE B: Do Not Translate list
+        if (in_array($lowerText, $this->doNotTranslate)) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_DO_NOT_TRANSLATE,
+                "O termo '{$cleanText}' esta na lista de nao traduziveis.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
         // 1. Check if target language is supported
         if (!in_array($targetLang, $this->activeLanguages)) {
             return $this->buildResponse(
@@ -106,6 +161,19 @@ class SmartEngine
         // 2. Load language packages
         $loadedSource = $this->loadLanguage($sourceLang);
         $loadedTarget = $this->loadLanguage($targetLang);
+
+        // RULE C: If word already exists in target language dictionary, skip
+        if ($loadedTarget && isset($this->reverseMaps[$targetLang][$lowerText])) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_SUCCESS,
+                'Termo ja existe no idioma de destino.',
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
 
         // 3. Try indexed dictionary (instant, offline)
         if ($loadedSource && $loadedTarget) {
@@ -220,6 +288,8 @@ class SmartEngine
             self::STATUS_CACHE_HIT => 'Recuperado do cache local',
             self::STATUS_WEB_TRANSLATED => 'Traduzido via web',
             self::STATUS_OFFLINE_FALLBACK => 'Modo offline ativo',
+            self::STATUS_SAME_LANGUAGE => 'Idiomas identicos',
+            self::STATUS_DO_NOT_TRANSLATE => 'Termo nao traduzivel',
             default => 'Status desconhecido',
         };
     }
@@ -231,6 +301,25 @@ class SmartEngine
             self::STATUS_TRANSLATION_MISSING,
             self::STATUS_OFFLINE_FALLBACK,
         ]);
+    }
+
+    public function addToDoNotTranslate(string $term): void
+    {
+        $lowerTerm = mb_strtolower(trim($term), 'UTF-8');
+        if (!in_array($lowerTerm, $this->doNotTranslate)) {
+            $this->doNotTranslate[] = $lowerTerm;
+        }
+    }
+
+    public function removeFromDoNotTranslate(string $term): void
+    {
+        $lowerTerm = mb_strtolower(trim($term), 'UTF-8');
+        $this->doNotTranslate = array_filter($this->doNotTranslate, fn($t) => $t !== $lowerTerm);
+    }
+
+    public function getDoNotTranslateList(): array
+    {
+        return $this->doNotTranslate;
     }
 
     private function recordMissing(string $text, string $sourceLang, string $targetLang): void
@@ -394,6 +483,7 @@ class SmartEngine
             'active_languages' => $this->activeLanguages,
             'total_words' => $totalWords,
             'missing_words' => $this->getMissingCount(),
+            'do_not_translate_count' => count($this->doNotTranslate),
         ];
     }
 }

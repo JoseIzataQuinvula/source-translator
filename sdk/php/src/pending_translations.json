@@ -16,5 +16,17 @@
         "source": "pt",
         "target": "en",
         "timestamp": 1788904761
+    },
+    {
+        "text": "... Olá",
+        "source": "pt",
+        "target": "en",
+        "timestamp": 1788905121
+    },
+    {
+        "text": "... Olá roubo",
+        "source": "pt",
+        "target": "en",
+        "timestamp": 1788905176
     }
 ]

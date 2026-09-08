@@ -1,0 +1,16 @@
+{
+    "7faa26cfb1ab1bf15d6fd33e82a7e3b6": {
+        "text": "... Olá",
+        "source": "pt",
+        "target": "en",
+        "requested_at": "2026-09-08 22:05:21",
+        "count": 1
+    },
+    "ecdb3907abd365c1781a21badbb5fb4c": {
+        "text": "... Olá roubo",
+        "source": "pt",
+        "target": "en",
+        "requested_at": "2026-09-08 22:06:16",
+        "count": 1
+    }
+}

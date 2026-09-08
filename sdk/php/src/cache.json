@@ -34,5 +34,32 @@
         "translated_text": "こんにちは",
         "provider": "MyMemory",
         "created_at": 1788905037
+    },
+    "a014bb006849cc0a384a2e5b068295bc95eb2271df0efc5d87620ab01b42c2f4": {
+        "text_hash": "a014bb006849cc0a384a2e5b068295bc95eb2271df0efc5d87620ab01b42c2f4",
+        "source_lang": "pt",
+        "target_lang": "ja",
+        "original_text": "... Olá",
+        "translated_text": "こんにちは",
+        "provider": "MyMemory",
+        "created_at": 1788905108
+    },
+    "369d7cd067899818e6cede3ca4525669a7d0b4545a395567f789888de043d848": {
+        "text_hash": "369d7cd067899818e6cede3ca4525669a7d0b4545a395567f789888de043d848",
+        "source_lang": "pt",
+        "target_lang": "en",
+        "original_text": "... Olá bomba",
+        "translated_text": "... Hello Bomb",
+        "provider": "MyMemory",
+        "created_at": 1788905144
+    },
+    "6e55529189654965ff87b348704a8d3e55bcf312e52dc8a1211277f167aeb72d": {
+        "text_hash": "6e55529189654965ff87b348704a8d3e55bcf312e52dc8a1211277f167aeb72d",
+        "source_lang": "pt",
+        "target_lang": "en",
+        "original_text": "... Olá roubo",
+        "translated_text": "... Hello theft",
+        "provider": "MyMemory",
+        "created_at": 1788905179
     }
 }

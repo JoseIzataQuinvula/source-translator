@@ -105,7 +105,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
     </form>
 
     <?php if ($resultado): ?>
-        <?php if ($resultado['provider'] === 'native_dictionary'): ?>
+        <?php if ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_SAME_LANGUAGE): ?>
+            <div class="native-box">
+                <strong>Idiomas Iguais</strong>
+                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
+                <span class="badge badge-native">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Sem traducao necessaria (<?php echo $resultado['latency_ms']; ?>ms)
+                </span>
+                <div class="status-code">Codigo: 106 - <?php echo $resultado['warning']; ?></div>
+            </div>
+        <?php elseif ($resultado['status'] === \SourceTranslator\SmartEngine::STATUS_DO_NOT_TRANSLATE): ?>
+            <div class="native-box">
+                <strong>Termo Protegido</strong>
+                <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
+                <span class="badge badge-native">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Lista de Nao Traduziveis (<?php echo $resultado['latency_ms']; ?>ms)
+                </span>
+                <div class="status-code">Codigo: 107 - <?php echo $resultado['warning']; ?></div>
+            </div>
+        <?php elseif ($resultado['provider'] === 'native_dictionary'): ?>
             <div class="native-box">
                 <strong>Traducao Nativa Indexada (Offline)</strong>
                 <p><?php echo htmlspecialchars($resultado['translated_text']); ?></p>
