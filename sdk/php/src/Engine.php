@@ -132,6 +132,7 @@ class Engine
             $lang = pathinfo($f, PATHINFO_FILENAME);
             $data = json_decode(file_get_contents($f), true) ?: [];
             foreach ($data as $id => $val) {
+                if (!is_string($val)) continue;
                 if (strtolower($val) === $lower) {
                     $results[$lang][$id] = $val;
                 }

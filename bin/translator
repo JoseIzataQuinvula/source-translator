@@ -1,0 +1,165 @@
+#!/usr/bin/env php
+<?php
+/**
+ * Source Translator CLI v1.0.0
+ * 
+ * @author    Jose Izata Quinvula
+ * @link      https://joseizataquinvula.pages.dev/
+ * @ecosystem DUCK STACK
+ * @license   MIT
+ */
+
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    die("ERRO: Este script so pode ser executado via terminal (CLI).\n");
+}
+
+require_once __DIR__ . '/../sdk/php/src/Engine.php';
+
+use SourceTranslator\Engine;
+
+$engine = new Engine();
+$dataDir = __DIR__ . '/../data/';
+$auditFile = $dataDir . 'audit.log';
+
+if (!is_dir($dataDir)) {
+    mkdir($dataDir, 0777, true);
+}
+
+function auditLog($user, $action, $details) {
+    global $auditFile;
+    $timestamp = date('Y-m-d H:i:s');
+    $line = "[{$timestamp}] USER: {$user} | ACTION: {$action} | {$details}\n";
+    file_put_contents($auditFile, $line, FILE_APPEND | LOCK_EX);
+}
+
+echo "=========================================================\n";
+echo "           Source Translator CLI v1.0.0                  \n";
+echo "           Created by Jose Izata Quinvula               \n";
+echo "           DUCK STACK                                    \n";
+echo "           https://joseizataquinvula.pages.dev/          \n";
+echo "========================================================\n\n";
+
+$command = $argv[1] ?? 'help';
+$user = getenv('ST_USER') ?: 'local';
+
+switch ($command) {
+    case 'pkg:list':
+        $pkgs = $engine->getPackages();
+        echo "Pacotes Locais:\n";
+        foreach ($pkgs as $lang => $count) {
+            echo "  {$lang}.json  ({$count} termos)\n";
+        }
+        break;
+
+    case 'pkg:download':
+        $lang = $argv[2] ?? null;
+        if (!$lang) {
+            echo "Uso: php bin/translator pkg:download [idioma]\n";
+            exit(1);
+        }
+        echo "Baixando pacote '{$lang}'...\n";
+        $engine->loadPackage($lang);
+        auditLog($user, 'DOWNLOAD_PKG', "LANG: {$lang}");
+        echo "Pacote '{$lang}.json' pronto!\n";
+        break;
+
+    case 'pkg:create':
+        $lang = $argv[2] ?? null;
+        if (!$lang) {
+            echo "Uso: php bin/translator pkg:create [idioma]\n";
+            exit(1);
+        }
+        $file = __DIR__ . '/../sdk/php/locales/' . strtolower($lang) . '.json';
+        if (!file_exists($file)) {
+            $pkg = [
+                '_metadata' => [
+                    'package' => strtolower($lang),
+                    'version' => '1.0.0',
+                    'author' => 'Jose Izata Quinvula',
+                    'project' => 'DUCK STACK',
+                    'repository' => 'https://github.com/JoseIzataQuinvula/source-translator',
+                ],
+            ];
+            file_put_contents($file, json_encode($pkg, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            auditLog($user, 'CREATE_PKG', "LANG: {$lang}");
+            echo "Pacote {$lang}.json criado com metadata de autor!\n";
+        } else {
+            echo "Pacote {$lang}.json ja existe.\n";
+        }
+        break;
+
+    case 'term:add':
+        $id = $argv[2] ?? null;
+        $ptText = $argv[3] ?? null;
+        $enText = $argv[4] ?? null;
+
+        if (!$id || !$ptText || !$enText) {
+            echo "Uso: php bin/translator term:add [ID] [Texto_PT] [Texto_EN]\n";
+            exit(1);
+        }
+
+        $localesDir = __DIR__ . '/../sdk/php/locales/';
+        
+        foreach (['pt', 'en'] as $lang) {
+            $file = $localesDir . "{$lang}.json";
+            $data = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
+            $data[$id] = $lang === 'pt' ? $ptText : $enText;
+            file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        }
+
+        auditLog($user, 'ADD_TERM', "ID: {$id} | PT: \"{$ptText}\" | EN: \"{$enText}\"");
+        echo "Termo #{$id} adicionado!\n";
+        echo "  PT: {$ptText}\n";
+        echo "  EN: {$enText}\n";
+        break;
+
+    case 'term:find':
+        $text = $argv[2] ?? null;
+        if (!$text) {
+            echo "Uso: php bin/translator term:find [texto]\n";
+            exit(1);
+        }
+        $results = $engine->findTerm($text);
+        if (empty($results)) {
+            echo "Nenhum resultado para: {$text}\n";
+        } else {
+            echo "Resultados:\n";
+            foreach ($results as $lang => $terms) {
+                foreach ($terms as $id => $val) {
+                    echo "  [{$lang}] #{$id} = {$val}\n";
+                }
+            }
+        }
+        break;
+
+    case 'audit':
+        if (file_exists($auditFile)) {
+            echo file_get_contents($auditFile);
+        } else {
+            echo "Nenhum registro de auditoria.\n";
+        }
+        break;
+
+    case 'test':
+        $text = $argv[2] ?? 'Hello';
+        $from = $argv[3] ?? 'en';
+        $to = $argv[4] ?? 'pt';
+        $result = $engine->translate($text, $from, $to);
+        echo "Original ({$from}): {$text}\n";
+        echo "Traduzido ({$to}): {$result}\n";
+        break;
+
+    default:
+        echo "Comandos:\n";
+        echo "  pkg:list                          Listar pacotes\n";
+        echo "  pkg:download [lang]               Baixar pacote remoto\n";
+        echo "  pkg:create [lang]                 Criar pacote vazio\n";
+        echo "  term:add [id] [pt] [en]           Adicionar termo\n";
+        echo "  term:find [texto]                 Buscar termo\n";
+        echo "  test [texto] [de] [para]          Testar traducao\n";
+        echo "  audit                             Ver log de auditoria\n";
+        break;
+}
+
+echo "\n";
