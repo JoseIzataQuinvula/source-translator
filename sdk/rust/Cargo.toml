@@ -1,0 +1,10 @@
+[package]
+name = "source-translator-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Free, cache-first translation library for Rust - runs locally with zero server costs"
+license = "MIT"
+repository = "https://github.com/source-translator/source-translator"
+
+[dependencies]
+source-translator-core = { path = "../../core" }

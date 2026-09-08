@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "source-translator"
+version = "0.1.0"
+description = "Free, cache-first translation library - runs locally with zero server costs"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Source Translator Contributors"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "httpx>=0.25.0",
+    "pydantic>=2.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/source-translator/source-translator"
+Repository = "https://github.com/source-translator/source-translator"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["source_translator*"]
