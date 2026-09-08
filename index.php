@@ -1,6 +1,6 @@
 <?php
 /**
- * Source Translator - Pure Terminal
+ * Source Translator - Pure Terminal + Package Manager
  */
 
 session_start();
@@ -14,8 +14,36 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
 use SourceTranslator\SmartEngine;
 
+$localesDir = __DIR__ . '/sdk/php/locales/';
 $engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
 $history = $_SESSION['history'] ?? [];
+
+function getPackages($dir) {
+    $files = glob($dir . '*.json');
+    $pkgs = [];
+    foreach ($files as $f) {
+        $lang = pathinfo($f, PATHINFO_FILENAME);
+        $data = json_decode(file_get_contents($f), true) ?: [];
+        $pkgs[$lang] = count($data);
+    }
+    return $pkgs;
+}
+
+function findTerm($dir, $text) {
+    $lower = strtolower(trim($text));
+    $files = glob($dir . '*.json');
+    $results = [];
+    foreach ($files as $f) {
+        $lang = pathinfo($f, PATHINFO_FILENAME);
+        $data = json_decode(file_get_contents($f), true) ?: [];
+        foreach ($data as $id => $val) {
+            if (strtolower($val) === $lower) {
+                $results[] = "  [{$lang}] #{$id} = {$val}";
+            }
+        }
+    }
+    return $results;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $cmd = trim($_POST['cmd']);
@@ -29,15 +57,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $history[] = ['cmd' => $cmd];
     
     if ($cmd === 'help') {
-        $history[] = ['out' => 'Comandos:', 'type' => 'info'];
+        $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'info'];
-        $history[] = ['out' => '  stats', 'type' => 'info'];
-        $history[] = ['out' => '  clear', 'type' => 'info'];
+        $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
+        $history[] = ['out' => '  pkg:list', 'type' => 'info'];
+        $history[] = ['out' => '  pkg:create <lang>', 'type' => 'info'];
+        $history[] = ['out' => 'Termos:', 'type' => 'info'];
+        $history[] = ['out' => '  term:find <texto>', 'type' => 'info'];
+        $history[] = ['out' => 'Sistema:', 'type' => 'info'];
+        $history[] = ['out' => '  stats / clear', 'type' => 'info'];
     } elseif ($cmd === 'stats') {
         $stats = $engine->getStats();
-        $history[] = ['out' => "Palavras: {$stats['total_words']}", 'type' => 'info'];
-        $history[] = ['out' => "Idiomas: " . implode(', ', $stats['active_languages']), 'type' => 'info'];
-        $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'info'];
+        $pkgs = getPackages($localesDir);
+        $history[] = ['out' => "Pacotes: " . count($pkgs), 'type' => 'ok'];
+        $history[] = ['out' => "Palavras: {$stats['total_words']}", 'type' => 'ok'];
+        $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'skip'];
+    } elseif ($cmd === 'pkg:list') {
+        $pkgs = getPackages($localesDir);
+        if (empty($pkgs)) {
+            $history[] = ['out' => 'Nenhum pacote encontrado.', 'type' => 'skip'];
+        } else {
+            $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
+            foreach ($pkgs as $lang => $count) {
+                $history[] = ['out' => "  {$lang}.json  ({$count} termos)", 'type' => 'ok'];
+            }
+        }
+    } elseif (preg_match('/^pkg:create\s+(\w[\w-]*)$/', $cmd, $m)) {
+        $lang = strtolower($m[1]);
+        $file = $localesDir . "{$lang}.json";
+        if (!file_exists($file)) {
+            file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $history[] = ['out' => "Pacote {$lang}.json criado!", 'type' => 'ok'];
+        } else {
+            $history[] = ['out' => "Pacote {$lang}.json ja existe.", 'type' => 'skip'];
+        }
+    } elseif (preg_match('/^term:find\s+(.+)$/', $cmd, $m)) {
+        $text = trim($m[1], '"\'');
+        $results = findTerm($localesDir, $text);
+        if (empty($results)) {
+            $history[] = ['out' => "Nenhum resultado para: {$text}", 'type' => 'skip'];
+        } else {
+            $history[] = ['out' => "Resultados:", 'type' => 'info'];
+            foreach ($results as $r) {
+                $history[] = ['out' => $r, 'type' => 'ok'];
+            }
+        }
     } elseif (preg_match('/^@(\w[\w-]*)\s+(.+?)\s+@(\w[\w-]*)$/u', $cmd, $m)) {
         $result = $engine->translate(trim($m[2], '"\''), $m[3], $m[1]);
         
@@ -50,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "[{$label}] {$result['translated_text']}", 'type' => $type];
         $history[] = ['out' => "  {$result['provider']} {$result['latency_ms']}ms", 'type' => 'dim'];
     } else {
-        $history[] = ['out' => 'Formato invalido. Use: @idioma texto @idioma', 'type' => 'err'];
+        $history[] = ['out' => 'Comando invalido. Digite help', 'type' => 'err'];
     }
     
     $_SESSION['history'] = $history;
@@ -80,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         @keyframes blink { 50% { opacity: 0; } }
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
         .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
-        #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 300px; z-index: 100; }
+        #suggestions { position: absolute; bottom: 70px; left: 20px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 0; display: none; min-width: 350px; z-index: 100; }
         .suggestion { padding: 4px 12px; cursor: pointer; font-size: 13px; color: #aaa; }
         .suggestion:hover, .suggestion.active { background: #333; color: #5cdc5c; }
     </style>
@@ -113,8 +177,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 
 <div class="helper-bar">
     <span>@pt @pt-AO @en</span>
+    <span>pkg:list</span>
+    <span>term:find</span>
     <span>help</span>
-    <span>stats</span>
     <span>clear</span>
 </div>
 
@@ -139,6 +204,9 @@ const commands = [
     '@pt bom dia @en',
     '@pt obrigado @en',
     '@pt ate mais @en',
+    'pkg:list',
+    'pkg:create ',
+    'term:find ',
     'help',
     'stats',
     'clear',
