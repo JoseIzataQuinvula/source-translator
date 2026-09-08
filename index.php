@@ -3,6 +3,8 @@
  * Source Translator - Pure Terminal
  */
 
+session_start();
+
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
 require_once __DIR__ . '/sdk/php/src/IndexedEngine.php';
@@ -13,13 +15,14 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 use SourceTranslator\SmartEngine;
 
 $engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
-$history = [];
-$cmd = '';
+$history = $_SESSION['history'] ?? [];
 
+// PRG: Process POST then redirect
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     $cmd = trim($_POST['cmd']);
     
     if ($cmd === 'clear') {
+        $_SESSION['history'] = [];
         header('Location: ' . $_SERVER['PHP_SELF']);
         exit;
     }
@@ -50,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     } else {
         $history[] = ['out' => 'Formato invalido. Use: @idioma texto @idioma', 'type' => 'err'];
     }
+    
+    $_SESSION['history'] = $history;
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
 }
 ?>
 <!DOCTYPE html>
