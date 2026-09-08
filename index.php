@@ -140,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $langs = ['en', 'pt', 'pt-AO', 'es', 'fr'];
         $total = 0;
         $found = 0;
+        $packageData = [];
         
         foreach ($langs as $lang) {
             $localFile = $localesDir . "{$lang}.json";
@@ -164,12 +165,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $remoteCount = count($data);
                     $total += $remoteCount;
                     $found++;
-                    
-                    $dateStr = $localDate ? " {$localDate}" : "";
-                    $localStr = $hasLocal ? " (local: {$localCount})" : "";
-                    $history[] = ['out' => "  @{$lang}  ({$remoteCount} palavras{$dateStr}){$localStr}", 'type' => 'ok'];
+                    $packageData[$lang] = [
+                        'count' => $remoteCount,
+                        'date' => $localDate,
+                        'hasLocal' => $hasLocal,
+                        'localCount' => $localCount,
+                    ];
                 }
             }
+        }
+        
+        foreach ($packageData as $lang => $info) {
+            $dateStr = $info['date'] ? " {$info['date']}" : "";
+            $translations = [];
+            foreach ($packageData as $otherLang => $otherInfo) {
+                if ($otherLang !== $lang) {
+                    $connDate = $otherInfo['date'] ? " {$otherInfo['date']}" : "";
+                    $translations[] = "@{$otherLang} ({$otherInfo['count']} palavras{$connDate})";
+                }
+            }
+            $transStr = !empty($translations) ? " traduzidoes: " . implode('; ', $translations) : "";
+            $history[] = ['out' => "  @{$lang}  ({$info['count']} palavras{$dateStr}){$transStr}", 'type' => 'ok'];
         }
         
         $history[] = ['out' => '', 'type' => 'skip'];
