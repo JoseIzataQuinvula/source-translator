@@ -15,6 +15,7 @@ An open-source, cache-first translation library designed to make i18n completely
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white)
 
 ### Tools & Infrastructure
 
@@ -24,13 +25,14 @@ An open-source, cache-first translation library designed to make i18n completely
 ![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
 ![PyPI](https://img.shields.io/badge/PyPI-3775A9?style=for-the-badge&logo=pypi&logoColor=white)
 ![crates.io](https://img.shields.io/badge/crates.io-FFA740?style=for-the-badge&logo=rust&logoColor=white)
+![Composer](https://img.shields.io/badge/Composer-885630?style=for-the-badge&logo=composer&logoColor=white)
 
 ---
 
 ## Key Features
 
 - **100% Free & Open Source:** No paid API keys or hidden costs.
-- **Local Cache-First:** SQLite (Rust) or JSON (JS/Python/Go) cache stored locally.
+- **Local Cache-First:** SQLite (Rust) or JSON (JS/Python/Go/PHP) cache stored locally.
 - **Multi-Provider Engine:** Automatic fallback between free web translation engines (Google, Bing).
 - **Privacy-First:** Your data never leaves your machine.
 - **Universal SDK:** Works in Web, Mobile, Backend, and CLI applications.
@@ -61,6 +63,12 @@ pip install source-translator
 
 ```bash
 go get github.com/source-translator/source-translator/sdk/go
+```
+
+### PHP
+
+```bash
+composer require source-translator/php
 ```
 
 ---
@@ -148,6 +156,22 @@ func main() {
     fmt.Println(result.TranslatedText)
     fmt.Println(result.Cached)
 }
+```
+
+### PHP
+
+```php
+<?php
+require_once 'vendor/autoload.php';
+
+use SourceTranslator\SourceTranslator;
+
+$translator = new SourceTranslator();
+
+$result = $translator->translate('Hello, World!', 'en', 'pt-BR');
+
+echo $result['translated_text'] . "\n";
+echo $result['cached'] ? 'true' : 'false';
 ```
 
 ---

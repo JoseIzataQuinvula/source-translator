@@ -1,0 +1,34 @@
+{
+    "name": "source-translator/php",
+    "description": "Free, cache-first translation library for PHP - runs locally with zero server costs",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Source Translator Contributors"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "ext-curl": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "SourceTranslator\\": "src/"
+        }
+    },
+    "keywords": [
+        "translation",
+        "i18n",
+        "translate",
+        "free",
+        "open-source",
+        "local",
+        "cache"
+    ],
+    "homepage": "https://github.com/JoseIzataQuinvula/source-translator",
+    "support": {
+        "issues": "https://github.com/JoseIzataQuinvula/source-translator/issues",
+        "source": "https://github.com/JoseIzataQuinvula/source-translator"
+    }
+}
