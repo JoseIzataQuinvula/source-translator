@@ -133,11 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "DNT: {$stats['do_not_translate_count']}", 'type' => 'info'];
     } elseif ($cmd === '@pacotes list') {
         $history[] = ['out' => '=== PACOTES (GitHub) ===', 'type' => 'info'];
-        $history[] = ['out' => 'A buscar pacotes no GitHub...', 'type' => 'skip'];
+        $history[] = ['out' => 'A buscar e baixar pacotes do GitHub...', 'type' => 'skip'];
         
         $langs = ['en', 'pt', 'pt-AO', 'es', 'fr'];
         $total = 0;
         $found = 0;
+        $downloaded = 0;
         
         foreach ($langs as $lang) {
             $url = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
@@ -157,9 +158,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $count = count($data);
                     $total += $count;
                     $found++;
+                    
+                    $localFile = $localesDir . "{$lang}.json";
+                    file_put_contents($localFile, $content);
+                    $downloaded++;
+                    
                     $history[] = ['out' => "", 'type' => 'ok'];
                     $history[] = ['out' => "  @{$lang}", 'type' => 'info'];
-                    $history[] = ['out' => "  Termos: {$count}", 'type' => 'ok'];
+                    $history[] = ['out' => "  Termos: {$count} | Baixado: OK", 'type' => 'ok'];
                     $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
                     foreach ($data as $id => $val) {
                         if (!is_string($val)) continue;
@@ -175,6 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         } else {
             $history[] = ['out' => "", 'type' => 'ok'];
             $history[] = ['out' => "Total: {$found} pacotes, {$total} termos", 'type' => 'info'];
+            $history[] = ['out' => "Baixados e atualizados: {$downloaded} pacotes", 'type' => 'ok'];
         }
     } elseif ($cmd === '@pacotes locais list') {
         $files = glob($localesDir . '*.json');
