@@ -1,6 +1,9 @@
 <?php
 /**
- * Source Translator - Terminal Interface
+ * Source Translator - Terminal
+ * 
+ * Comando: @idioma texto @idioma
+ * Exemplo: @pt "bom dia" @en
  */
 
 require_once __DIR__ . '/sdk/php/src/Cache.php';
@@ -12,97 +15,88 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 
 use SourceTranslator\SmartEngine;
 
-$engine = new SmartEngine(['en', 'pt-AO'], __DIR__ . '/sdk/php');
-$resultado = null;
+$engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
+$output = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
-    $texto = $_POST['texto'];
-    $target = $_POST['target'];
-    $source = $_POST['source'];
-    $resultado = $engine->translate($texto, $target, $source);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
+    $cmd = trim($_POST['cmd']);
+    
+    if ($cmd === 'help') {
+        $output[] = ['type' => 'info', 'text' => 'Comandos: @idioma texto @idioma'];
+        $output[] = ['type' => 'info', 'text' => 'Exemplo:  @pt "bom dia" @en'];
+        $output[] = ['type' => 'info', 'text' => 'Idiomas:  pt, pt-AO, en'];
+        $output[] = ['type' => 'info', 'text' => 'Stats:    stats'];
+    } elseif ($cmd === 'stats') {
+        $stats = $engine->getStats();
+        $output[] = ['type' => 'info', 'text' => 'Palavras: ' . $stats['total_words']];
+        $output[] = ['type' => 'info', 'text' => 'Idiomas:  ' . implode(', ', $stats['active_languages'])];
+        $output[] = ['type' => 'info', 'text' => 'Missing:  ' . $stats['missing_words']];
+    } elseif (preg_match('/^@(\w[\w-]*)\s+(.+?)\s+@(\w[\w-]*)$/u', $cmd, $m)) {
+        $source = $m[1];
+        $text = trim($m[2], '"\'');
+        $target = $m[3];
+        
+        $result = $engine->translate($text, $target, $source);
+        
+        $statusMap = [
+            0 => ['OK', 'success'],
+            101 => ['LANG?', 'error'],
+            103 => ['CACHE', 'info'],
+            104 => ['WEB', 'info'],
+            105 => ['OFFLINE', 'error'],
+            106 => ['SAME', 'warning'],
+            107 => ['DNT', 'warning'],
+            108 => ['SKIP', 'warning'],
+            109 => ['DICT', 'success'],
+        ];
+        
+        [$label, $type] = $statusMap[$result['status']] ?? ['?', 'info'];
+        
+        $output[] = ['type' => $type, 'text' => "[{$label}] {$result['translated_text']}"];
+        $output[] = ['type' => 'dim', 'text' => "status={$result['status']} provider={$result['provider']} {$result['latency_ms']}ms"];
+    } else {
+        $output[] = ['type' => 'error', 'text' => 'Formato invalido. Use: @idioma texto @idioma'];
+    }
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>source-translator ~ $</title>
+    <title>source-translator</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; padding: 20px; min-height: 100vh; }
-        .terminal { max-width: 700px; }
-        .line { margin-bottom: 8px; white-space: pre-wrap; word-break: break-all; }
-        .prompt { color: #5cdc5c; }
-        .cmd { color: #f2f2f2; }
-        .output { color: #cccccc; }
+        body { background: #0c0c0c; color: #cccccc; font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; padding: 15px; }
+        .header { color: #5cdc5c; margin-bottom: 15px; }
+        .dim { color: #555; }
         .success { color: #5cdc5c; }
         .warning { color: #e5c07b; }
         .error { color: #e06c75; }
         .info { color: #61afef; }
-        .dim { color: #555555; }
-        .separator { color: #333333; margin: 15px 0; }
-        .input-line { display: flex; align-items: center; gap: 10px; margin-top: 15px; }
-        .input-line input, .input-line select { background: #1a1a1a; border: 1px solid #333; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 6px 10px; border-radius: 3px; }
-        .input-line input[type="text"] { flex: 1; }
-        .input-line select { width: auto; }
-        .input-line button { background: #333; border: 1px solid #555; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 6px 15px; border-radius: 3px; cursor: pointer; }
-        .input-line button:hover { background: #444; }
-        .help { color: #555555; font-size: 12px; margin-top: 10px; }
+        .output-line { margin: 4px 0; }
+        .input-form { margin-top: 15px; display: flex; gap: 8px; }
+        .input-form input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 8px 10px; border-radius: 3px; }
+        .input-form input:focus { outline: none; border-color: #5cdc5c; }
+        .input-form button { background: #333; border: 1px solid #555; color: #f2f2f2; font-family: inherit; font-size: 14px; padding: 8px 15px; border-radius: 3px; cursor: pointer; }
+        .input-form button:hover { background: #444; }
+        .help { color: #555; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="terminal">
-    <div class="line"><span class="info">source-translator</span> <span class="dim">v1.0.0</span></div>
-    <div class="line"><span class="dim">----------------------------------------</span></div>
+<div class="header">source-translator v1.0.0</div>
+<div class="dim">----------------------------------------</div>
 
-    <?php if ($resultado): ?>
-        <div class="line"><span class="prompt">$</span> <span class="cmd">traduzir "<?= htmlspecialchars($_POST['texto']) ?>" <?= $_POST['source'] ?> -> <?= $_POST['target'] ?></span></div>
+<?php foreach ($output as $line): ?>
+    <div class="output-line <?= $line['type'] ?>"><?= htmlspecialchars($line['text']) ?></div>
+<?php endforeach; ?>
 
-        <?php if ($resultado['status'] === 0): ?>
-            <div class="line"><span class="success">[OK]</span> <?= htmlspecialchars($resultado['translated_text']) ?></div>
-        <?php elseif ($resultado['status'] === 106): ?>
-            <div class="line"><span class="warning">[SKIP]</span> <?= htmlspecialchars($resultado['translated_text']) ?> <span class="dim">(mesmo idioma)</span></div>
-        <?php elseif ($resultado['status'] === 107): ?>
-            <div class="line"><span class="warning">[DNT]</span> <?= htmlspecialchars($resultado['translated_text']) ?> <span class="dim">(nao traduzivel)</span></div>
-        <?php elseif ($resultado['status'] === 108): ?>
-            <div class="line"><span class="warning">[SKIP]</span> <?= htmlspecialchars($resultado['translated_text']) ?> <span class="dim">(tag notranslate)</span></div>
-        <?php elseif ($resultado['status'] === 101): ?>
-            <div class="line"><span class="error">[ERR]</span> <?= htmlspecialchars($resultado['translated_text']) ?> <span class="dim">(idioma nao suportado)</span></div>
-        <?php elseif ($resultado['status'] === 105): ?>
-            <div class="line"><span class="error">[OFFLINE]</span> <?= htmlspecialchars($resultado['translated_text']) ?></div>
-        <?php else: ?>
-            <div class="line"><span class="info">[<?= $resultado['provider'] ?>]</span> <?= htmlspecialchars($resultado['translated_text']) ?></div>
-        <?php endif; ?>
+<form class="input-form" method="POST">
+    <input type="text" name="cmd" placeholder="@pt texto @en" autofocus>
+    <button type="submit">executar</button>
+</form>
 
-        <div class="line"><span class="dim">   status=<?= $resultado['status'] ?> provider=<?= $resultado['provider'] ?: 'none' ?> latency=<?= $resultado['latency_ms'] ?>ms</span></div>
-        <div class="line separator"></div>
-    <?php endif; ?>
-
-    <div class="line"><span class="prompt">$</span> <span class="cmd">help</span></div>
-    <div class="line output">Comandos: traduzir &lt;texto&gt; &lt;de&gt; &lt;para&gt;</div>
-    <div class="line output">Idiomas:  en, pt-AO</div>
-    <div class="line separator"></div>
-
-    <form method="POST">
-        <div class="input-line">
-            <span class="prompt">$</span>
-            <input type="text" name="texto" placeholder="digite o texto..." required autofocus>
-            <select name="source">
-                <option value="en">en</option>
-                <option value="pt-AO">pt-AO</option>
-            </select>
-            <span class="dim">-></span>
-            <select name="target">
-                <option value="pt-AO">pt-AO</option>
-                <option value="en">en</option>
-            </select>
-            <button type="submit">executar</button>
-        </div>
-    </form>
-
-    <div class="help">Enter para traduzir | en=english pt-AO=portugues angola</div>
-</div>
+<div class="help">@idioma texto @idioma | @pt @pt-AO @en | help | stats</div>
 
 </body>
 </html>
