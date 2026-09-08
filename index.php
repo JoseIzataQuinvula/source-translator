@@ -126,6 +126,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $userRole = null;
         $currentUser = null;
         $history[] = ['out' => "Logout realizado.", 'type' => 'skip'];
+    } elseif ($cmd === '@user') {
+        if ($currentUser) {
+            $history[] = ['out' => "{$currentUser}$", 'type' => 'ok'];
+        } else {
+            $history[] = ['out' => "Nao esta logado.", 'type' => 'skip'];
+        }
     } elseif ($cmd === 'stats') {
         $stats = $engine->getStats();
         $pkgs = getPackages($localesDir);
@@ -446,6 +452,7 @@ const commands = [
     '@pt obrigado @en',
     '@pt ate mais @en',
     '@login ',
+    '@user',
     '@pacotes list',
     '@pacotes locais list',
     '@pt download',
