@@ -14,6 +14,7 @@ class Engine
 {
     private string $localesDir;
     private string $remoteRepoUrl;
+    private string $githubToken;
     private array $loadedMaps = [];
     private array $reverseMaps = [];
     private array $protectedTerms = [
@@ -27,6 +28,7 @@ class Engine
     {
         $this->localesDir = rtrim($localesDir, '/') . '/';
         $this->remoteRepoUrl = 'https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/';
+        $this->githubToken = getenv('GITHUB_API_TOKEN') ?: '';
 
         if (!is_dir($this->localesDir)) {
             mkdir($this->localesDir, 0777, true);
@@ -145,12 +147,17 @@ class Engine
     {
         $url = $this->remoteRepoUrl . "{$lang}.json";
 
+        $headers = ['User-Agent: SourceTranslator/1.0'];
+        if (!empty($this->githubToken)) {
+            $headers[] = 'Authorization: Bearer ' . $this->githubToken;
+        }
+
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'SourceTranslator/1.0');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $content = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -164,6 +171,73 @@ class Engine
         } else {
             file_put_contents($this->localesDir . "{$lang}.json", json_encode([], JSON_PRETTY_PRINT));
         }
+    }
+
+    public function publishPackage(string $lang, array $data, string $commitMessage = ''): bool
+    {
+        if (empty($this->githubToken)) {
+            return false;
+        }
+
+        $url = "https://api.github.com/repos/JoseIzataQuinvula/source-translator/contents/sdk/php/locales/{$lang}.json";
+        
+        $content = base64_encode(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $sha = $this->getFileSha($lang);
+        
+        $payload = json_encode([
+            'message' => $commitMessage ?: "Update {$lang}.json via Source Translator CLI",
+            'content' => $content,
+            'sha' => $sha,
+        ]);
+
+        $headers = [
+            'User-Agent: SourceTranslator-CLI',
+            'Authorization: Bearer ' . $this->githubToken,
+            'Content-Type: application/json',
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return $httpCode === 200 || $httpCode === 201;
+    }
+
+    private function getFileSha(string $lang): ?string
+    {
+        $url = "https://api.github.com/repos/JoseIzataQuinvula/source-translator/contents/sdk/php/locales/{$lang}.json";
+        
+        $headers = [
+            'User-Agent: SourceTranslator-CLI',
+            'Authorization: Bearer ' . $this->githubToken,
+        ];
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            $data = json_decode($response, true);
+            return $data['sha'] ?? null;
+        }
+        return null;
+    }
+
+    public function hasGithubToken(): bool
+    {
+        return !empty($this->githubToken);
     }
 
     public static function getHeader(): string

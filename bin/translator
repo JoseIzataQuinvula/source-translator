@@ -141,6 +141,38 @@ switch ($command) {
         }
         break;
 
+    case 'pkg:publish':
+        $lang = $argv[2] ?? null;
+        if (!$lang) {
+            echo "Uso: php bin/translator pkg:publish [idioma]\n";
+            exit(1);
+        }
+
+        if (!$engine->hasGithubToken()) {
+            echo "ERRO: GITHUB_API_TOKEN nao configurado.\n";
+            echo "Configure a variavel de ambiente ou crie o arquivo .env\n";
+            echo "Veja .env.example para instrucoes.\n";
+            exit(1);
+        }
+
+        $file = __DIR__ . '/../sdk/php/locales/' . strtolower($lang) . '.json';
+        if (!file_exists($file)) {
+            echo "Pacote {$lang}.json nao existe localmente.\n";
+            exit(1);
+        }
+
+        $data = json_decode(file_get_contents($file), true);
+        echo "Publicando pacote {$lang}.json no GitHub...\n";
+        
+        if ($engine->publishPackage($lang, $data)) {
+            auditLog($user, 'PUBLISH_PKG', "LANG: {$lang} | STATUS: SUCCESS");
+            echo "Pacote {$lang}.json publicado com sucesso!\n";
+        } else {
+            auditLog($user, 'PUBLISH_PKG', "LANG: {$lang} | STATUS: FAILED");
+            echo "Falha ao publicar. Verifique o token GITHUB_API_TOKEN.\n";
+        }
+        break;
+
     case 'test':
         $text = $argv[2] ?? 'Hello';
         $from = $argv[3] ?? 'en';
@@ -155,6 +187,7 @@ switch ($command) {
         echo "  pkg:list                          Listar pacotes\n";
         echo "  pkg:download [lang]               Baixar pacote remoto\n";
         echo "  pkg:create [lang]                 Criar pacote vazio\n";
+        echo "  pkg:publish [lang]                Publicar pacote no GitHub (requer token)\n";
         echo "  term:add [id] [pt] [en]           Adicionar termo\n";
         echo "  term:find [texto]                 Buscar termo\n";
         echo "  test [texto] [de] [para]          Testar traducao\n";

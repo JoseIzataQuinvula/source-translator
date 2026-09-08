@@ -4,3 +4,5 @@
 *.jpeg
 *.gif
 *.svg
+.env
+data/audit.log
