@@ -91,9 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             $history[] = ['out' => '  @idioma create / @idioma edit', 'type' => 'ok'];
             $history[] = ['out' => '  pkg:create / term:add', 'type' => 'ok'];
         } elseif ($userRole === 'user') {
-            $history[] = ['out' => '[USER] Acesso limitado', 'type' => 'skip'];
-            $history[] = ['out' => '  @idioma download / @idioma update', 'type' => 'ok'];
-            $history[] = ['out' => '  pkg:list / term:find', 'type' => 'ok'];
+        $history[] = ['out' => 'Admin:', 'type' => 'info'];
+        $history[] = ['out' => '  @login usuario senha / logout', 'type' => 'skip'];
+        $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
+        $history[] = ['out' => '  @pacotes list / @pacotes locais list', 'type' => 'ok'];
+        $history[] = ['out' => '  @idioma download / @idioma update', 'type' => 'ok'];
         }
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
@@ -209,16 +211,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             }
             $history[] = ['out' => "", 'type' => 'ok'];
             $history[] = ['out' => "Total: " . count($files) . " pacotes, {$total} termos", 'type' => 'info'];
-        }
-    } elseif ($cmd === 'pkg:list') {
-        $pkgs = getPackages($localesDir);
-        if (empty($pkgs)) {
-            $history[] = ['out' => 'Nenhum pacote encontrado.', 'type' => 'skip'];
-        } else {
-            $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-            foreach ($pkgs as $lang => $count) {
-                $history[] = ['out' => "  {$lang}.json  ({$count} termos)", 'type' => 'ok'];
-            }
         }
     } elseif (preg_match('/^@(\w[\w-]*)\s+download$/i', $cmd, $m)) {
         $lang = strtolower($m[1]);
@@ -420,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
     <span>@en</span>
     <span>@idioma download</span>
     <span>@idioma update</span>
-    <span>pkg:list</span>
+    <span>help</span>
     <span>term:find</span>
     <span>help</span>
     <span>clear</span>
@@ -463,9 +455,9 @@ const commands = [
     '@pt-AO update',
     '@pt-AO create',
     '@pt-AO edit ',
-    'pkg:list',
-    'pkg:create ',
-    'term:find ',
+    '@login ',
+    '@pacotes list',
+    '@pacotes locais list',
     'logout',
     'help',
     'stats',
