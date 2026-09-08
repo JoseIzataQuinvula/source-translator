@@ -24,6 +24,8 @@ class SmartEngine
     const STATUS_OFFLINE_FALLBACK = 105;
     const STATUS_SAME_LANGUAGE = 106;
     const STATUS_DO_NOT_TRANSLATE = 107;
+    const STATUS_NO_TRANSLATE_TAG = 108;
+    const STATUS_SENTENCE_TRANSLATED = 109;
 
     private array $doNotTranslate = [
         'source translator',
@@ -115,6 +117,19 @@ class SmartEngine
             return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_SUCCESS, null, 0);
         }
 
+        // RULE 0: HTML notranslate tags
+        if ($this->hasNoTranslateTag($cleanText)) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_NO_TRANSLATE_TAG,
+                'Elemento marcado com translate="no" ou .notranslate.',
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
         $lowerText = mb_strtolower($cleanText, 'UTF-8');
         $sourceLang = strtolower($sourceLang);
         $targetLang = strtolower($targetLang);
@@ -175,7 +190,7 @@ class SmartEngine
             );
         }
 
-        // 3. Try indexed dictionary (instant, offline)
+        // 3. LEVEL 1: Try indexed dictionary - full sentence match (instant, offline)
         if ($loadedSource && $loadedTarget) {
             if (isset($this->reverseMaps[$sourceLang][$lowerText])) {
                 $id = $this->reverseMaps[$sourceLang][$lowerText];
@@ -186,7 +201,7 @@ class SmartEngine
                         $sourceLang,
                         $targetLang,
                         'native_dictionary',
-                        self::STATUS_SUCCESS,
+                        self::STATUS_SENTENCE_TRANSLATED,
                         null,
                         (int) ((microtime(true) - $start) * 1000)
                     );
@@ -194,7 +209,24 @@ class SmartEngine
             }
         }
 
-        // 4. Check local cache
+        // 4. LEVEL 2: Smart sentence segmentation - word-by-word translation
+        if ($loadedSource && $loadedTarget) {
+            $translated = $this->translateBySegments($cleanText, $sourceLang, $targetLang);
+
+            if ($translated !== null) {
+                return $this->buildResponse(
+                    $translated,
+                    $sourceLang,
+                    $targetLang,
+                    'native_dictionary_segments',
+                    self::STATUS_SENTENCE_TRANSLATED,
+                    'Traducao por segmentos do dicionario.',
+                    (int) ((microtime(true) - $start) * 1000)
+                );
+            }
+        }
+
+        // 5. Check local cache
         $cache = $this->loadCache();
         $hashKey = md5($cleanText . '_' . $sourceLang . '_' . $targetLang);
 
@@ -210,7 +242,7 @@ class SmartEngine
             );
         }
 
-        // 5. Try web providers
+        // 6. Try web providers
         $providers = [
             new GoogleProvider(),
             new BingProvider(),
@@ -244,7 +276,7 @@ class SmartEngine
             }
         }
 
-        // 6. All providers failed - record missing and add to pending
+        // 7. All providers failed - record missing and add to pending
         $this->recordMissing($cleanText, $sourceLang, $targetLang);
         $this->addToPending($cleanText, $sourceLang, $targetLang);
 
@@ -257,6 +289,59 @@ class SmartEngine
             "A traducao de '{$cleanText}' para '{$targetLang}' nao esta disponivel no momento. Texto original mantido.",
             (int) ((microtime(true) - $start) * 1000)
         );
+    }
+
+    private function hasNoTranslateTag(string $text): bool
+    {
+        $patterns = [
+            '/translate\s*=\s*["\']no["\']/',
+            '/data-notranslate/',
+            '/class\s*=\s*["\'][^"\']*notranslate[^"\']*["\']/',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function translateBySegments(string $text, string $sourceLang, string $targetLang): ?string
+    {
+        $pattern = '/(\s+|[^\w\s\x{00C0}-\x{00FF}]+|[\x{00C0}-\x{00FF}]+)/u';
+        $tokens = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+        if ($tokens === false || empty($tokens)) {
+            return null;
+        }
+
+        $translated = '';
+        $hasAnyTranslation = false;
+
+        foreach ($tokens as $token) {
+            $lowerToken = mb_strtolower(trim($token), 'UTF-8');
+
+            if (empty($lowerToken) || preg_match('/^\s+$/', $token)) {
+                $translated .= $token;
+                continue;
+            }
+
+            if (isset($this->reverseMaps[$sourceLang][$lowerToken])) {
+                $id = $this->reverseMaps[$sourceLang][$lowerToken];
+
+                if (isset($this->maps[$targetLang][$id])) {
+                    $translated .= $this->maps[$targetLang][$id];
+                    $hasAnyTranslation = true;
+                    continue;
+                }
+            }
+
+            $translated .= $token;
+        }
+
+        return $hasAnyTranslation ? $translated : null;
     }
 
     private function buildResponse(
@@ -288,8 +373,10 @@ class SmartEngine
             self::STATUS_CACHE_HIT => 'Recuperado do cache local',
             self::STATUS_WEB_TRANSLATED => 'Traduzido via web',
             self::STATUS_OFFLINE_FALLBACK => 'Modo offline ativo',
-            self::STATUS_SAME_LANGUAGE => 'Idiomas identicos',
+            self::STATUS_SAME_LANGUAGE => 'Identicos',
             self::STATUS_DO_NOT_TRANSLATE => 'Termo nao traduzivel',
+            self::STATUS_NO_TRANSLATE_TAG => 'Tag HTML notranslate',
+            self::STATUS_SENTENCE_TRANSLATED => 'Traducao por segmentos',
             default => 'Status desconhecido',
         };
     }
