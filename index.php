@@ -4,6 +4,18 @@
  * Testa todas as funcionalidades do SmartEngine
  */
 
+// PRG Pattern: After POST, redirect to GET to avoid resubmission warning
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    session_start();
+    $_SESSION['last_test'] = $_POST;
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+session_start();
+$dadosTeste = $_SESSION['last_test'] ?? null;
+unset($_SESSION['last_test']);
+
 require_once __DIR__ . '/sdk/php/src/Cache.php';
 require_once __DIR__ . '/sdk/php/src/Providers.php';
 require_once __DIR__ . '/sdk/php/src/IndexedEngine.php';
