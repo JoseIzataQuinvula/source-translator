@@ -186,8 +186,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         .info { color: #61afef; }
         .prompt-line { display: flex; align-items: center; margin-top: 10px; }
         .prompt { color: #5cdc5c; margin-right: 8px; }
-        .input-area { position: relative; flex: 1; }
-        .ghost { position: absolute; left: 0; top: 0; color: #333; pointer-events: none; white-space: pre; }
+        .input-area { position: relative; flex: 1; min-height: 20px; }
+        .ghost { position: absolute; left: 0; top: 0; color: #444; pointer-events: none; white-space: pre; font-family: inherit; font-size: inherit; z-index: 1; }
+        #display { position: relative; z-index: 2; color: #f2f2f2; }
         .cursor { display: inline-block; width: 8px; height: 16px; background: #5cdc5c; animation: blink 1s step-end infinite; vertical-align: middle; }
         @keyframes blink { 50% { opacity: 0; } }
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
