@@ -184,8 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         .err { color: #e06c75; }
         .skip { color: #e5c07b; }
         .info { color: #61afef; }
-        .prompt-line { display: flex; align-items: center; margin-top: 10px; }
+        .prompt-line { display: flex; align-items: center; margin-top: 10px; background: #1a1a1a; padding: 10px 14px; border-radius: 4px; border: 1px solid #333; }
         .prompt { color: #5cdc5c; margin-right: 8px; }
+        .input-area { position: relative; flex: 1; }
+        .ghost { position: absolute; left: 0; top: 0; color: #333; pointer-events: none; white-space: pre; }
         .cursor { display: inline-block; width: 8px; height: 16px; background: #5cdc5c; animation: blink 1s step-end infinite; vertical-align: middle; }
         @keyframes blink { 50% { opacity: 0; } }
         .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
@@ -215,7 +217,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 
 <div class="prompt-line">
     <span class="prompt">$</span>
-    <span id="display"></span><span class="cursor"></span>
+    <div class="input-area">
+        <span class="ghost" id="ghost"></span>
+        <span id="display"></span><span class="cursor"></span>
+    </div>
 </div>
 
 <div class="helper-bar">
@@ -231,6 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 
 <script>
 const display = document.getElementById('display');
+const ghost = document.getElementById('ghost');
 const input = document.getElementById('cmd-input');
 const form = document.getElementById('input-form');
 let buffer = '';
@@ -261,16 +267,23 @@ const commands = [
     'clear',
 ];
 
-function showSuggestions(filter) {
-    if (!filter || filter.length < 1) {
-        return null;
-    }
+function getSuggestion(text) {
+    if (!text || text.length < 1) return null;
     
     const match = commands.find(c => 
-        c.toLowerCase().indexOf(filter.toLowerCase()) === 0 && c.length > filter.length
+        c.toLowerCase().indexOf(text.toLowerCase()) === 0 && c.length > text.length
     );
     
-    return match ? match.slice(filter.length) : null;
+    return match ? match.slice(text.length) : null;
+}
+
+function updateGhost() {
+    const suggestion = getSuggestion(buffer);
+    if (suggestion) {
+        ghost.textContent = buffer + suggestion;
+    } else {
+        ghost.textContent = '';
+    }
 }
 
 document.addEventListener('keydown', (e) => {
@@ -280,22 +293,26 @@ document.addEventListener('keydown', (e) => {
     } else if (e.key === 'Backspace') {
         buffer = buffer.slice(0, -1);
         display.textContent = buffer;
+        updateGhost();
     } else if (e.key === 'Tab') {
         e.preventDefault();
-        const suggestion = showSuggestions(buffer);
+        const suggestion = getSuggestion(buffer);
         if (suggestion) {
             buffer += suggestion;
             display.textContent = buffer;
+            ghost.textContent = '';
         }
     } else if (e.key === 'ArrowRight') {
-        const suggestion = showSuggestions(buffer);
+        const suggestion = getSuggestion(buffer);
         if (suggestion && display.textContent.length === buffer.length) {
             buffer += suggestion;
             display.textContent = buffer;
+            ghost.textContent = '';
         }
     } else if (e.key.length === 1) {
         buffer += e.key;
         display.textContent = buffer;
+        updateGhost();
     }
 });
 </script>
