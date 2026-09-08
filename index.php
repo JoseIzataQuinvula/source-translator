@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
         $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-        $history[] = ['out' => '  @idioma update / pkg:list / pkg:create', 'type' => 'ok'];
+        $history[] = ['out' => '  @idioma download / pkg:list / pkg:create', 'type' => 'ok'];
         $history[] = ['out' => 'Termos:', 'type' => 'info'];
         $history[] = ['out' => '  term:find <texto>', 'type' => 'ok'];
         $history[] = ['out' => 'Sistema:', 'type' => 'info'];
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                 $history[] = ['out' => "  {$lang}.json  ({$count} termos)", 'type' => 'ok'];
             }
         }
-    } elseif (preg_match('/^@(\w[\w-]*)\s+update$/i', $cmd, $m)) {
+    } elseif (preg_match('/^@(\w[\w-]*)\s+download$/i', $cmd, $m)) {
         $lang = strtolower($m[1]);
         $file = $localesDir . "{$lang}.json";
         $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
@@ -314,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 
 <script>
 const dictionary = [
-    '@pt update', '@en update', '@pt-AO update', '@es update', '@fr update',
+    '@pt download', '@en download', '@pt-AO download', '@es download', '@fr download',
     '@en hello @pt-AO', '@en goodbye @pt-AO', '@en good morning @pt-AO',
     '@en good night @pt-AO', '@en thank you @pt-AO', '@en how are you @pt-AO',
     '@pt-AO bom dia @en', '@pt-AO obrigado @en', '@pt-AO ate logo @en',
