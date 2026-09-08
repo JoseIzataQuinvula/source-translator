@@ -71,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         .prompt { color: #5cdc5c; margin-right: 8px; }
         .cursor { display: inline-block; width: 8px; height: 16px; background: #5cdc5c; animation: blink 1s step-end infinite; vertical-align: middle; }
         @keyframes blink { 50% { opacity: 0; } }
+        .helper-bar { margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; display: flex; gap: 15px; font-size: 11px; color: #444; }
+        .helper-bar span { padding: 2px 6px; background: #1a1a1a; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -95,6 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 <div class="prompt-line">
     <span class="prompt">$</span>
     <span id="display"></span><span class="cursor"></span>
+</div>
+
+<div class="helper-bar">
+    <span>@pt @pt-AO @en</span>
+    <span>help</span>
+    <span>stats</span>
+    <span>clear</span>
 </div>
 
 <script>
