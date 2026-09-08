@@ -167,10 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $history[] = ['out' => "  @{$lang}", 'type' => 'info'];
                     $history[] = ['out' => "  Termos: {$count} | Baixado: OK", 'type' => 'ok'];
                     $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
-                    foreach ($data as $id => $val) {
+                    foreach ($data as $key => $val) {
+                        if (is_array($val)) continue;
                         if (!is_string($val)) continue;
                         $preview = mb_strlen($val) > 40 ? mb_substr($val, 0, 40) . '...' : $val;
-                        $history[] = ['out' => "    [{$id}] {$preview}", 'type' => 'dim'];
+                        $history[] = ['out' => "    {$key}: {$preview}", 'type' => 'dim'];
                     }
                 }
             }
