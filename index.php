@@ -231,8 +231,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             } else {
                 $data = json_decode(file_get_contents($file), true) ?: [];
                 $data[$id] = $value;
-            file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $history[] = ['out' => "[OK] {$lang}.json: #{$id} = {$value}", 'type' => 'ok'];
+                file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                $history[] = ['out' => "[OK] {$lang}.json: #{$id} = {$value}", 'type' => 'ok'];
+            }
         }
     } elseif (preg_match('/^pkg:create\s+(\w[\w-]*)$/', $cmd, $m)) {
         if ($userRole !== 'root') {
