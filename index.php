@@ -142,6 +142,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $found = 0;
         
         foreach ($langs as $lang) {
+            $localFile = $localesDir . "{$lang}.json";
+            $hasLocal = file_exists($localFile);
+            $localDate = $hasLocal ? date('d/m/Y', filemtime($localFile)) : null;
+            $localCount = $hasLocal ? count(json_decode(file_get_contents($localFile), true) ?: []) : 0;
+            
             $url = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
             
             $ch = curl_init();
@@ -156,10 +161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             if ($httpCode === 200 && !empty($content)) {
                 $data = json_decode($content, true);
                 if (is_array($data)) {
-                    $count = count($data);
-                    $total += $count;
+                    $remoteCount = count($data);
+                    $total += $remoteCount;
                     $found++;
-                    $history[] = ['out' => "  @{$lang}  ({$count} palavras)", 'type' => 'ok'];
+                    
+                    $dateStr = $localDate ? " {$localDate}" : "";
+                    $localStr = $hasLocal ? " (local: {$localCount})" : "";
+                    $history[] = ['out' => "  @{$lang}  ({$remoteCount} palavras{$dateStr}){$localStr}", 'type' => 'ok'];
                 }
             }
         }
