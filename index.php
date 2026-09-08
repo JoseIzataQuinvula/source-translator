@@ -131,6 +131,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "Palavras: {$stats['total_words']}", 'type' => 'ok'];
         $history[] = ['out' => "Missing: {$stats['missing_words']}", 'type' => 'skip'];
         $history[] = ['out' => "DNT: {$stats['do_not_translate_count']}", 'type' => 'info'];
+    } elseif ($cmd === '@pacotes list') {
+        $files = glob($localesDir . '*.json');
+        if (empty($files)) {
+            $history[] = ['out' => 'Nenhum pacote encontrado.', 'type' => 'skip'];
+        } else {
+            $history[] = ['out' => '=== PACOTES ===', 'type' => 'info'];
+            $total = 0;
+            foreach ($files as $f) {
+                $lang = pathinfo($f, PATHINFO_FILENAME);
+                $data = json_decode(file_get_contents($f), true) ?: [];
+                $count = count($data);
+                $total += $count;
+                $modified = date('Y-m-d H:i', filemtime($f));
+                $history[] = ['out' => "  [{$lang}] {$count} termos | Ultima atualizacao: {$modified}", 'type' => 'ok'];
+            }
+            $history[] = ['out' => "-------------------", 'type' => 'dim'];
+            $history[] = ['out' => "Total: " . count($files) . " pacotes, {$total} termos", 'type' => 'info'];
+        }
     } elseif ($cmd === 'pkg:list') {
         $pkgs = getPackages($localesDir);
         if (empty($pkgs)) {
@@ -370,6 +388,7 @@ const commands = [
     '@pt obrigado @en',
     '@pt ate mais @en',
     '@login ',
+    '@pacotes list',
     '@pt download',
     '@pt update',
     '@pt create',
