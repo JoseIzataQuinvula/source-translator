@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "DNT: {$stats['do_not_translate_count']}", 'type' => 'info'];
     } elseif ($cmd === '@pacotes list') {
         $history[] = ['out' => '=== PACOTES DISPONIVEIS (GitHub) ===', 'type' => 'info'];
-        $history[] = ['out' => 'A buscar pacotes do GitHub...', 'type' => 'skip'];
+        $history[] = ['out' => '', 'type' => 'skip'];
         
         $langs = ['en', 'pt', 'pt-AO', 'es', 'fr'];
         $total = 0;
@@ -159,26 +159,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $count = count($data);
                     $total += $count;
                     $found++;
-                    
-                    $history[] = ['out' => "", 'type' => 'ok'];
-                    $history[] = ['out' => "  @{$lang} ({$count} palavras)", 'type' => 'info'];
-                    $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
-                    foreach ($data as $key => $val) {
-                        if (is_array($val)) continue;
-                        if (!is_string($val)) continue;
-                        $preview = mb_strlen($val) > 40 ? mb_substr($val, 0, 40) . '...' : $val;
-                        $history[] = ['out' => "    [{$key}] {$preview}", 'type' => 'dim'];
-                    }
+                    $history[] = ['out' => "  @{$lang}  ({$count} palavras)", 'type' => 'ok'];
                 }
             }
         }
         
-        if ($found === 0) {
-            $history[] = ['out' => 'Nenhum pacote encontrado no GitHub.', 'type' => 'skip'];
-        } else {
-            $history[] = ['out' => "", 'type' => 'ok'];
-            $history[] = ['out' => "Total: {$found} idiomas, {$total} palavras", 'type' => 'info'];
-        }
+        $history[] = ['out' => '', 'type' => 'skip'];
+        $history[] = ['out' => "Total: {$found} idiomas, {$total} palavras", 'type' => 'info'];
+        $history[] = ['out' => 'Use @idioma download para baixar um pacote.', 'type' => 'dim'];
     } elseif ($cmd === '@pacotes locais list') {
         $files = glob($localesDir . '*.json');
         if (empty($files)) {
