@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => 'Traducao:', 'type' => 'info'];
         $history[] = ['out' => '  @idioma texto @idioma', 'type' => 'ok'];
         $history[] = ['out' => 'Pacotes:', 'type' => 'info'];
-        $history[] = ['out' => '  pkg:list / pkg:create / pkg:download', 'type' => 'ok'];
+        $history[] = ['out' => '  @idioma update / pkg:list / pkg:create', 'type' => 'ok'];
         $history[] = ['out' => 'Termos:', 'type' => 'info'];
         $history[] = ['out' => '  term:find <texto>', 'type' => 'ok'];
         $history[] = ['out' => 'Sistema:', 'type' => 'info'];
@@ -101,6 +101,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             foreach ($pkgs as $lang => $count) {
                 $history[] = ['out' => "  {$lang}.json  ({$count} termos)", 'type' => 'ok'];
             }
+        }
+    } elseif (preg_match('/^@(\w[\w-]*)\s+update$/i', $cmd, $m)) {
+        $lang = strtolower($m[1]);
+        $file = $localesDir . "{$lang}.json";
+        $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $cdnUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $content = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200 && !empty($content)) {
+            $data = json_decode($content, true);
+            if (is_array($data)) {
+                file_put_contents($file, $content);
+                $history[] = ['out' => "[OK] Pacote {$lang}.json atualizado! (" . count($data) . " termos)", 'type' => 'ok'];
+            } else {
+                $history[] = ['out' => "Formato invalido no CDN.", 'type' => 'err'];
+            }
+        } else {
+            file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            $history[] = ['out' => "Pacote remoto nao encontrado. Criado {$lang}.json vazio.", 'type' => 'skip'];
         }
     } elseif (preg_match('/^pkg:create\s+(\w[\w-]*)$/', $cmd, $m)) {
         $lang = strtolower($m[1]);
@@ -254,9 +280,11 @@ const commands = [
     '@pt bom dia @en',
     '@pt obrigado @en',
     '@pt ate mais @en',
+    '@pt update',
+    '@en update',
+    '@pt-AO update',
     'pkg:list',
     'pkg:create ',
-    'pkg:download ',
     'term:find ',
     'help',
     'stats',
