@@ -25,5 +25,14 @@
         "translated_text": "&&",
         "provider": "MyMemory",
         "created_at": 1788904763
+    },
+    "1ecccc15a91b762eb138db5430de5cdb232a0cfbaa5ffaff887f48f063346e60": {
+        "text_hash": "1ecccc15a91b762eb138db5430de5cdb232a0cfbaa5ffaff887f48f063346e60",
+        "source_lang": "pt",
+        "target_lang": "ja",
+        "original_text": "ola",
+        "translated_text": "こんにちは",
+        "provider": "MyMemory",
+        "created_at": 1788905037
     }
 }

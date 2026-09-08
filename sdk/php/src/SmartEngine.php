@@ -15,6 +15,14 @@ class SmartEngine
     private array $loadedLanguages = [];
     private array $activeLanguages;
 
+    // Status codes
+    const STATUS_SUCCESS = 0;
+    const STATUS_LANGUAGE_NOT_SUPPORTED = 101;
+    const STATUS_TRANSLATION_MISSING = 102;
+    const STATUS_CACHE_HIT = 103;
+    const STATUS_WEB_TRANSLATED = 104;
+    const STATUS_OFFLINE_FALLBACK = 105;
+
     public function __construct(array $activeLanguages = ['pt', 'en'], ?string $baseDir = null)
     {
         $dir = $baseDir ?? __DIR__;
@@ -47,7 +55,6 @@ class SmartEngine
 
         $filePath = $this->localesDir . $lang . '.json';
 
-        // Download on-demand if file doesn't exist locally
         if (!file_exists($filePath)) {
             $this->downloadLanguagePackage($lang);
         }
@@ -59,7 +66,6 @@ class SmartEngine
             if (is_array($data)) {
                 $this->maps[$lang] = $data;
 
-                // Build reverse map: Text -> ID
                 foreach ($data as $id => $text) {
                     $cleanText = mb_strtolower(trim($text), 'UTF-8');
                     $this->reverseMaps[$lang][$cleanText] = $id;
@@ -77,64 +83,66 @@ class SmartEngine
         $cleanText = trim($text);
 
         if (empty($cleanText)) {
-            return [
-                'translated_text' => $text,
-                'source_lang' => $sourceLang,
-                'target_lang' => $targetLang,
-                'provider' => 'empty',
-                'cached' => false,
-                'fallback' => false,
-                'offline' => false,
-                'latency_ms' => 0,
-            ];
+            return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_SUCCESS, null, 0);
         }
 
         $lowerText = mb_strtolower($cleanText, 'UTF-8');
         $sourceLang = strtolower($sourceLang);
         $targetLang = strtolower($targetLang);
 
-        // Load language packages
+        // 1. Check if target language is supported
+        if (!in_array($targetLang, $this->activeLanguages)) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_LANGUAGE_NOT_SUPPORTED,
+                "O idioma '{$targetLang}' nao esta ativado no sistema. Exibindo texto original.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
+        // 2. Load language packages
         $loadedSource = $this->loadLanguage($sourceLang);
         $loadedTarget = $this->loadLanguage($targetLang);
 
-        // 1. Try indexed dictionary (instant, offline)
+        // 3. Try indexed dictionary (instant, offline)
         if ($loadedSource && $loadedTarget) {
             if (isset($this->reverseMaps[$sourceLang][$lowerText])) {
                 $id = $this->reverseMaps[$sourceLang][$lowerText];
 
                 if (isset($this->maps[$targetLang][$id])) {
-                    return [
-                        'translated_text' => $this->maps[$targetLang][$id],
-                        'source_lang' => $sourceLang,
-                        'target_lang' => $targetLang,
-                        'provider' => 'native_dictionary',
-                        'cached' => false,
-                        'fallback' => false,
-                        'offline' => true,
-                        'latency_ms' => (int) ((microtime(true) - $start) * 1000),
-                    ];
+                    return $this->buildResponse(
+                        $this->maps[$targetLang][$id],
+                        $sourceLang,
+                        $targetLang,
+                        'native_dictionary',
+                        self::STATUS_SUCCESS,
+                        null,
+                        (int) ((microtime(true) - $start) * 1000)
+                    );
                 }
             }
         }
 
-        // 2. Check local cache
+        // 4. Check local cache
         $cache = $this->loadCache();
         $hashKey = md5($cleanText . '_' . $sourceLang . '_' . $targetLang);
 
         if (isset($cache[$hashKey])) {
-            return [
-                'translated_text' => $cache[$hashKey],
-                'source_lang' => $sourceLang,
-                'target_lang' => $targetLang,
-                'provider' => 'local_cache',
-                'cached' => true,
-                'fallback' => false,
-                'offline' => true,
-                'latency_ms' => (int) ((microtime(true) - $start) * 1000),
-            ];
+            return $this->buildResponse(
+                $cache[$hashKey],
+                $sourceLang,
+                $targetLang,
+                'local_cache',
+                self::STATUS_CACHE_HIT,
+                null,
+                (int) ((microtime(true) - $start) * 1000)
+            );
         }
 
-        // 3. Try web providers
+        // 5. Try web providers
         $providers = [
             new GoogleProvider(),
             new BingProvider(),
@@ -145,47 +153,84 @@ class SmartEngine
             try {
                 $result = $provider->translate($cleanText, $sourceLang, $targetLang);
 
-                // Validate translation
                 $normalizedResult = mb_strtolower(trim($result['translated_text']));
                 $normalizedText = mb_strtolower(trim($cleanText));
 
                 if ($normalizedResult !== $normalizedText || $sourceLang === $targetLang) {
-                    // Cache valid translations
                     $cache[$hashKey] = $result['translated_text'];
                     $this->saveCache($cache);
                 }
 
-                return [
-                    'translated_text' => $result['translated_text'],
-                    'source_lang' => $sourceLang,
-                    'target_lang' => $targetLang,
-                    'provider' => $result['provider'],
-                    'cached' => false,
-                    'fallback' => false,
-                    'offline' => false,
-                    'latency_ms' => (int) ((microtime(true) - $start) * 1000),
-                ];
+                return $this->buildResponse(
+                    $result['translated_text'],
+                    $sourceLang,
+                    $targetLang,
+                    $result['provider'],
+                    self::STATUS_WEB_TRANSLATED,
+                    null,
+                    (int) ((microtime(true) - $start) * 1000)
+                );
             } catch (\Exception $e) {
                 error_log("Provider {$provider->getName()} failed: " . $e->getMessage());
                 continue;
             }
         }
 
-        // 4. All providers failed - record missing and add to pending
+        // 6. All providers failed - record missing and add to pending
         $this->recordMissing($cleanText, $sourceLang, $targetLang);
         $this->addToPending($cleanText, $sourceLang, $targetLang);
 
-        // 5. Return original text with fallback flag
+        return $this->buildResponse(
+            $cleanText,
+            $sourceLang,
+            $targetLang,
+            'offline',
+            self::STATUS_OFFLINE_FALLBACK,
+            "A traducao de '{$cleanText}' para '{$targetLang}' nao esta disponivel no momento. Texto original mantido.",
+            (int) ((microtime(true) - $start) * 1000)
+        );
+    }
+
+    private function buildResponse(
+        string $translatedText,
+        string $sourceLang,
+        string $targetLang,
+        string $provider,
+        int $statusCode,
+        ?string $warning,
+        int $latencyMs
+    ): array {
         return [
-            'translated_text' => $cleanText,
+            'translated_text' => $translatedText,
             'source_lang' => $sourceLang,
             'target_lang' => $targetLang,
-            'provider' => 'offline',
-            'cached' => false,
-            'fallback' => true,
-            'offline' => true,
-            'latency_ms' => (int) ((microtime(true) - $start) * 1000),
+            'provider' => $provider,
+            'status' => $statusCode,
+            'warning' => $warning,
+            'latency_ms' => $latencyMs,
         ];
+    }
+
+    public function getStatusMessage(int $statusCode): string
+    {
+        return match ($statusCode) {
+            self::STATUS_SUCCESS => 'Traducao concluida com sucesso',
+            self::STATUS_LANGUAGE_NOT_SUPPORTED => 'Idioma nao suportado',
+            self::STATUS_TRANSLATION_MISSING => 'Traducao nao encontrada no dicionario',
+            self::STATUS_CACHE_HIT => 'Recuperado do cache local',
+            self::STATUS_WEB_TRANSLATED => 'Traduzido via web',
+            self::STATUS_OFFLINE_FALLBACK => 'Modo offline ativo',
+            default => 'Status desconhecido',
+        };
+    }
+
+    public function hasWarning(int $statusCode): bool
+    {
+        return in_array($statusCode, [
+            self::STATUS_LANGUAGE_NOT_SUPPORTED,
+            self::STATUS_TRANSLATION_MISSING,
+            self::STATUS_OFFLINE_FALLBACK,
+        ]);
     }
 
     private function recordMissing(string $text, string $sourceLang, string $targetLang): void
@@ -221,7 +266,6 @@ class SmartEngine
 
     private function downloadLanguagePackage(string $lang): void
     {
-        // Try to download from CDN/GitHub
         $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
 
         $ch = curl_init();
@@ -236,7 +280,6 @@ class SmartEngine
         curl_close($ch);
 
         if ($httpCode === 200 && $content) {
-            // Validate JSON before saving
             $data = json_decode($content, true);
             if (is_array($data)) {
                 file_put_contents($this->localesDir . $lang . '.json', $content);
