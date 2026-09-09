@@ -1,8 +1,11 @@
 use std::time::Duration;
 
-use axum::{routing::get, routing::post, Router, extract::State, Json};
+use axum::{
+    extract::DefaultBodyLimit,
+    routing::{get, post},
+    Json, Router, extract::State,
+};
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::timeout::TimeoutLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -30,7 +33,7 @@ async fn main() {
         .route("/api/v1/translate/batch", post(translate_batch))
         .route("/api/v1/languages", get(languages))
         .layer(cors)
-        .layer(RequestBodyLimitLayer::new(MAX_BODY_SIZE))
+        .layer(DefaultBodyLimit::max(MAX_BODY_SIZE))
         .layer(TimeoutLayer::new(REQUEST_TIMEOUT))
         .with_state(translator);
 
@@ -42,6 +45,13 @@ async fn main() {
     tracing::info!("Source Translator API running on 0.0.0.0:{}", port);
 
     axum::serve(listener, app).await.unwrap();
+}
+
+fn sanitize_text(text: &str) -> String {
+    text.chars()
+        .filter(|c| !matches!(c, '\0' | '\x01' | '\x02' | '\x03' | '\x7f'))
+        .take(10000)
+        .collect()
 }
 
 async fn health_check() -> Json<serde_json::Value> {
@@ -56,11 +66,8 @@ async fn translate(
     State(translator): State<Translator>,
     Json(request): Json<TranslateRequest>,
 ) -> Json<serde_json::Value> {
-    let text = request.text.clone();
-    let sanitized = text.replace(['\0', '\x01', '\x02', '\x03'], "");
-
     let mut req = request;
-    req.text = sanitized;
+    req.text = sanitize_text(&req.text);
 
     match translator.translate(req).await {
         Ok(result) => Json(serde_json::json!({
@@ -81,9 +88,8 @@ async fn translate_batch(
     let sanitized: Vec<TranslateRequest> = requests
         .into_iter()
         .map(|r| {
-            let clean = r.text.replace(['\0', '\x01', '\x02', '\x03'], "");
             let mut req = r;
-            req.text = clean;
+            req.text = sanitize_text(&req.text);
             req
         })
         .collect();
