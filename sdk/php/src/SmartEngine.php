@@ -310,35 +310,18 @@ class SmartEngine
             );
         }
 
-        // 6. If both local packages exist but word was not found
+        // 6. If both local packages exist, word was not found anywhere
         if ($loadedSource && $loadedTarget) {
-            $existsInSource = isset($this->reverseMaps[$sourceKey][$lowerText]);
-            $existsInTarget = isset($this->reverseMaps[$targetKey][$lowerText]);
-
-            if (!$existsInSource && !$existsInTarget) {
-                $this->recordMissing($cleanText, $sourceLang, $targetLang);
-                return $this->buildResponse(
-                    $cleanText,
-                    $sourceLang,
-                    $targetLang,
-                    'local_dictionary',
-                    self::STATUS_TRANSLATION_MISSING,
-                    "Termo '{$cleanText}' nao existe nos dicionarios de '{$sourceLang}' nem '{$targetLang}'.",
-                    (int) ((microtime(true) - $start) * 1000)
-                );
-            }
-
-            if (!$existsInSource) {
-                return $this->buildResponse(
-                    $cleanText,
-                    $sourceLang,
-                    $targetLang,
-                    'local_dictionary',
-                    self::STATUS_TRANSLATION_MISSING,
-                    "Termo '{$cleanText}' nao existe no dicionario de '{$sourceLang}'.",
-                    (int) ((microtime(true) - $start) * 1000)
-                );
-            }
+            $this->recordMissing($cleanText, $sourceLang, $targetLang);
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                'local_dictionary',
+                self::STATUS_TRANSLATION_MISSING,
+                "Termo '{$cleanText}' nao encontrado nos dicionarios de '{$sourceLang}' e '{$targetLang}'.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
         }
 
         // 7. Try web providers (only when local package is missing)
