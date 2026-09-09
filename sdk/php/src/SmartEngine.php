@@ -310,7 +310,20 @@ class SmartEngine
             );
         }
 
-        // 6. Try web providers
+        // 6. Try web providers ONLY if packages are not locally available
+        if ($loadedSource && $loadedTarget) {
+            $this->recordMissing($cleanText, $sourceLang, $targetLang);
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                'local_dictionary',
+                self::STATUS_TRANSLATION_MISSING,
+                "Termo '{$cleanText}' nao encontrado nos dicionarios locais.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
         $providers = [
             new GoogleProvider(),
             new BingProvider(),

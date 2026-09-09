@@ -5,5 +5,12 @@
         "target": "en",
         "requested_at": "2026-09-08 22:15:10",
         "count": 1
+    },
+    "c547a8f00b19cae2f6bddb47b204ef65": {
+        "text": "horro",
+        "source": "en",
+        "target": "pt-ao",
+        "requested_at": "2026-09-09 01:07:49",
+        "count": 1
     }
 }

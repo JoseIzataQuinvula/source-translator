@@ -4,5 +4,11 @@
         "source": "pt",
         "target": "en",
         "timestamp": 1788905710
+    },
+    {
+        "text": "horro",
+        "source": "en",
+        "target": "pt-ao",
+        "timestamp": 1788916069
     }
 ]
