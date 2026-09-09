@@ -168,4 +168,12 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+## Disclaimer
+
+1. **Uso por Sua Conta e Risco**: Este software e fornecido "como esta" (*as-is*), para fins educacionais e de desenvolvimento. O autor nao garante a precisao, exatidao ou confiabilidade das traducoes geradas pelos motores ou provedores integrados.
+2. **Ausencia de Responsabilidade Financeira ou Juridica**: O criador/mantenedor deste repositorio nao assume qualquer responsabilidade por perdas financeiras, danos diretos ou indiretos, falhas em ambientes de producao, processos judiciais ou quaisquer prejuizos decorrentes do uso deste software por terceiros.
+3. **Servicos de Terceiros e APIs**: O utilizador e o unico responsavel pelo cumprimento dos Termos de Servico e custos associados aos provedores externos (Google, Bing, etc.) e pela utilizacao de chaves de API proprias.
+
+---
+
 **Jose Izata Quinvula | DUCK STACK | [joseizataquinvula.pages.dev](https://joseizataquinvula.pages.dev/)**
