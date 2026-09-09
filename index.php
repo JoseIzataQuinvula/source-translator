@@ -230,8 +230,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             $history[] = ['out' => "", 'type' => 'skip'];
             $history[] = ['out' => "Total: " . count($localData) . " idiomas, {$total} palavras", 'type' => 'info'];
         }
-    } elseif (preg_match('/^@(\w[\w-]*)\s+download$/i', $cmd, $m)) {
-        $lang = strtolower($m[1]);
+    } elseif (preg_match('/^@([\w-]+)\s+download$/i', $cmd, $m)) {
+        $lang = $m[1];
         $file = $localesDir . "{$lang}.json";
         $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
         
@@ -256,8 +256,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
             $history[] = ['out' => "Pacote remoto nao encontrado. Criado {$lang}.json vazio.", 'type' => 'skip'];
         }
-    } elseif (preg_match('/^@(\w[\w-]*)\s+update$/i', $cmd, $m)) {
-        $lang = strtolower($m[1]);
+    } elseif (preg_match('/^@([\w-]+)\s+update$/i', $cmd, $m)) {
+        $lang = $m[1];
         $file = $localesDir . "{$lang}.json";
         $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
         
@@ -288,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         if ($userRole !== 'root') {
             $history[] = ['out' => "ERRO: Apenas ROOT pode criar pacotes.", 'type' => 'err'];
         } else {
-            $lang = strtolower($m[1]);
+            $lang = $m[1];
             $file = $localesDir . "{$lang}.json";
             if (!file_exists($file)) {
                 $pkg = [
@@ -309,7 +309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         if ($userRole !== 'root') {
             $history[] = ['out' => "ERRO: Apenas ROOT pode editar pacotes.", 'type' => 'err'];
         } else {
-            $lang = strtolower($m[1]);
+            $lang = $m[1];
             $id = $m[2];
             $key = $m[3];
             $value = trim($m[4], '"\'');
@@ -328,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         if ($userRole !== 'root') {
             $history[] = ['out' => "ERRO: Apenas ROOT pode criar pacotes.", 'type' => 'err'];
         } else {
-            $lang = strtolower($m[1]);
+            $lang = $m[1];
             $file = $localesDir . "{$lang}.json";
             if (!file_exists($file)) {
                 file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));

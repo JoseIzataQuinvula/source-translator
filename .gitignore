@@ -12,12 +12,6 @@ sdk/php/missing.json
 sdk/php/pending_translations.json
 sdk/php/data/audit.log
 
-# Images (generated)
-*.png
-*.jpg
-*.jpeg
-*.gif
-
 # OS files
 .DS_Store
 Thumbs.db
