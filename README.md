@@ -158,7 +158,7 @@ Input Text
 |------|--------|
 | `root` | Create, edit, term:add, full access |
 | `editor` | Edit existing packages |
-| `user` | Download, update, pkg:list, term:find |
+| `user` | Download, update, @pacotes list, term:find |
 
 ---
 
