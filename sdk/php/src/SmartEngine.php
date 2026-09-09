@@ -310,20 +310,38 @@ class SmartEngine
             );
         }
 
-        // 6. Try web providers ONLY if packages are not locally available
+        // 6. If both local packages exist but word was not found
         if ($loadedSource && $loadedTarget) {
-            $this->recordMissing($cleanText, $sourceLang, $targetLang);
-            return $this->buildResponse(
-                $cleanText,
-                $sourceLang,
-                $targetLang,
-                'local_dictionary',
-                self::STATUS_TRANSLATION_MISSING,
-                "Termo '{$cleanText}' nao encontrado nos dicionarios locais.",
-                (int) ((microtime(true) - $start) * 1000)
-            );
+            $existsInSource = isset($this->reverseMaps[$sourceKey][$lowerText]);
+            $existsInTarget = isset($this->reverseMaps[$targetKey][$lowerText]);
+
+            if (!$existsInSource && !$existsInTarget) {
+                $this->recordMissing($cleanText, $sourceLang, $targetLang);
+                return $this->buildResponse(
+                    $cleanText,
+                    $sourceLang,
+                    $targetLang,
+                    'local_dictionary',
+                    self::STATUS_TRANSLATION_MISSING,
+                    "Termo '{$cleanText}' nao existe nos dicionarios de '{$sourceLang}' nem '{$targetLang}'.",
+                    (int) ((microtime(true) - $start) * 1000)
+                );
+            }
+
+            if (!$existsInSource) {
+                return $this->buildResponse(
+                    $cleanText,
+                    $sourceLang,
+                    $targetLang,
+                    'local_dictionary',
+                    self::STATUS_TRANSLATION_MISSING,
+                    "Termo '{$cleanText}' nao existe no dicionario de '{$sourceLang}'.",
+                    (int) ((microtime(true) - $start) * 1000)
+                );
+            }
         }
 
+        // 7. Try web providers (only when local package is missing)
         $providers = [
             new GoogleProvider(),
             new BingProvider(),
