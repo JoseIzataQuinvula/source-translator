@@ -31,7 +31,7 @@ require_once __DIR__ . '/sdk/php/src/SourceTranslator.php';
 use SourceTranslator\SmartEngine;
 
 $localesDir = __DIR__ . '/sdk/php/locales/';
-$engine = new SmartEngine(['en', 'pt-AO', 'pt'], __DIR__ . '/sdk/php');
+$engine = new SmartEngine(['en', 'pt-AO', 'pt-BR'], __DIR__ . '/sdk/php');
 $history = $_SESSION['history'] ?? [];
 
 $userRole = $_SESSION['user_role'] ?? null;
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => '=== PACOTES DISPONIVEIS (GitHub) ===', 'type' => 'info'];
         $history[] = ['out' => '', 'type' => 'skip'];
         
-        $langs = ['en', 'pt', 'pt-AO', 'es', 'fr'];
+        $langs = ['en', 'pt-AO', 'pt-BR', 'es', 'fr'];
         $total = 0;
         $found = 0;
         $packageData = [];
@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $history[] = ['out' => "Total: {$found} idiomas, {$total} palavras", 'type' => 'info'];
     } elseif ($cmd === '@pacotes locais list') {
         $files = glob($localesDir . '*.json');
-        $skipLangs = ['en_pt-AO', 'pt-AO_en'];
+        $skipLangs = ['en_pt-AO', 'pt-AO_en', 'pt-BR_en', 'en_pt-BR'];
         $total = 0;
         $localData = [];
         
@@ -425,8 +425,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 </div>
 
 <div class="helper-bar">
-    <span>@pt</span>
     <span>@pt-AO</span>
+    <span>@pt-BR</span>
     <span>@en</span>
     <span>@idioma download</span>
     <span>@idioma update</span>
@@ -455,17 +455,17 @@ const commands = [
     '@pt-AO bom dia @en',
     '@pt-AO obrigado @en',
     '@pt-AO ate logo @en',
-    '@pt bom dia @en',
-    '@pt obrigado @en',
-    '@pt ate mais @en',
+    '@pt-BR bom dia @en',
+    '@pt-BR obrigado @en',
+    '@pt-BR ate mais @en',
     '@login ',
     '@user',
     '@pacotes list',
     '@pacotes locais list',
-    '@pt download',
-    '@pt update',
-    '@pt create',
-    '@pt edit ',
+    '@pt-BR download',
+    '@pt-BR update',
+    '@pt-BR create',
+    '@pt-BR edit ',
     '@en download',
     '@en update',
     '@en create',
