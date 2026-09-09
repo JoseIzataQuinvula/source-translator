@@ -149,11 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $packageData = [];
         
         foreach ($langs as $lang) {
-            $localFile = $localesDir . "{$lang}.json";
-            $hasLocal = file_exists($localFile);
-            $localDate = $hasLocal ? date('d/m/Y', filemtime($localFile)) : null;
-            $localCount = $hasLocal ? count(json_decode(file_get_contents($localFile), true) ?: []) : 0;
-            
             $url = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
             
             $ch = curl_init();
@@ -171,32 +166,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
                     $remoteCount = count($data);
                     $total += $remoteCount;
                     $found++;
+                    
+                    $localFile = $localesDir . "{$lang}.json";
+                    file_put_contents($localFile, $content);
+                    $localDate = date('d/m/Y');
+                    
                     $packageData[$lang] = [
                         'count' => $remoteCount,
                         'date' => $localDate,
-                        'hasLocal' => $hasLocal,
-                        'localCount' => $localCount,
                     ];
                 }
             }
         }
         
         foreach ($packageData as $lang => $info) {
-            $dateStr = $info['date'] ? " {$info['date']}" : "";
             $translations = [];
             foreach ($packageData as $otherLang => $otherInfo) {
                 if ($otherLang !== $lang) {
-                    $connDate = $otherInfo['date'] ? " {$otherInfo['date']}" : "";
-                    $translations[] = "@{$otherLang} ({$otherInfo['count']} traducoes{$connDate})";
+                    $translations[] = "@{$otherLang} ({$otherInfo['count']} traducoes {$otherInfo['date']})";
                 }
             }
             $transStr = !empty($translations) ? " traducoes: " . implode('; ', $translations) : "";
-            $history[] = ['out' => "  @{$lang}  ({$info['count']} palavras{$dateStr}){$transStr}", 'type' => 'ok'];
+            $history[] = ['out' => "  @{$lang}  ({$info['count']} palavras {$info['date']}){$transStr}", 'type' => 'ok'];
         }
         
         $history[] = ['out' => '', 'type' => 'skip'];
         $history[] = ['out' => "Total: {$found} idiomas, {$total} palavras", 'type' => 'info'];
-        $history[] = ['out' => 'Use @idioma download para baixar um pacote.', 'type' => 'dim'];
     } elseif ($cmd === '@pacotes locais list') {
         $files = glob($localesDir . '*.json');
         $skipLangs = ['en_pt-AO', 'pt-AO_en'];
