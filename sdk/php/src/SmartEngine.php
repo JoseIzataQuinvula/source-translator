@@ -204,9 +204,46 @@ class SmartEngine
             );
         }
 
-        // 2. Load language packages
+        // 2. Check if source language exists
+        if (!in_array($sourceKey, $this->activeLanguages)) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_LANGUAGE_NOT_SUPPORTED,
+                "O idioma de origem '{$sourceLang}' nao esta ativado. Use @{$sourceLang} download primeiro.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
+        // 3. Load language packages
         $loadedSource = $this->loadLanguage($sourceLang);
         $loadedTarget = $this->loadLanguage($targetLang);
+
+        if (!$loadedSource) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_LANGUAGE_NOT_SUPPORTED,
+                "Pacote do idioma '{$sourceLang}' nao encontrado. Use @{$sourceLang} download.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
+
+        if (!$loadedTarget) {
+            return $this->buildResponse(
+                $cleanText,
+                $sourceLang,
+                $targetLang,
+                '',
+                self::STATUS_LANGUAGE_NOT_SUPPORTED,
+                "Pacote do idioma '{$targetLang}' nao encontrado. Use @{$targetLang} download.",
+                (int) ((microtime(true) - $start) * 1000)
+            );
+        }
 
         // RULE C: If word already exists in target language dictionary, skip
         if ($loadedTarget && isset($this->reverseMaps[$targetKey][$lowerText])) {
