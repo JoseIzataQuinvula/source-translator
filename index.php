@@ -204,24 +204,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         } else {
             $history[] = ['out' => '=== PACOTES LOCAIS ===', 'type' => 'info'];
             $total = 0;
+            $localData = [];
+            
             foreach ($files as $f) {
                 $lang = pathinfo($f, PATHINFO_FILENAME);
                 $data = json_decode(file_get_contents($f), true) ?: [];
                 $count = count($data);
                 $total += $count;
-                $modified = date('Y-m-d H:i', filemtime($f));
-                $history[] = ['out' => "", 'type' => 'ok'];
-                $history[] = ['out' => "  @{$lang}", 'type' => 'info'];
-                $history[] = ['out' => "  Termos: {$count} | Modificado: {$modified}", 'type' => 'ok'];
-                $history[] = ['out' => "  Conteudo:", 'type' => 'dim'];
-                foreach ($data as $id => $val) {
-                    if (!is_string($val)) continue;
-                    $preview = mb_strlen($val) > 40 ? mb_substr($val, 0, 40) . '...' : $val;
-                    $history[] = ['out' => "    [{$id}] {$preview}", 'type' => 'dim'];
-                }
+                $modified = date('d/m/Y', filemtime($f));
+                $localData[$lang] = [
+                    'count' => $count,
+                    'date' => $modified,
+                ];
             }
-            $history[] = ['out' => "", 'type' => 'ok'];
-            $history[] = ['out' => "Total: " . count($files) . " pacotes, {$total} termos", 'type' => 'info'];
+            
+            foreach ($localData as $lang => $info) {
+                $translations = [];
+                foreach ($localData as $otherLang => $otherInfo) {
+                    if ($otherLang !== $lang) {
+                        $translations[] = "@{$otherLang} ({$otherInfo['count']} traducoes {$otherInfo['date']})";
+                    }
+                }
+                $transStr = !empty($translations) ? " traducoes: " . implode('; ', $translations) : "";
+                $history[] = ['out' => "  @{$lang}  ({$info['count']} palavras {$info['date']}){$transStr}", 'type' => 'ok'];
+            }
+            
+            $history[] = ['out' => "", 'type' => 'skip'];
+            $history[] = ['out' => "Total: " . count($files) . " idiomas, {$total} palavras", 'type' => 'info'];
         }
     } elseif (preg_match('/^@(\w[\w-]*)\s+download$/i', $cmd, $m)) {
         $lang = strtolower($m[1]);
