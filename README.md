@@ -159,12 +159,6 @@ Input Text
 | `root` | Create, edit, term:add |
 | `user` | Download, update, pkg:list, term:find |
 
-Default credentials are set via environment variables (see `.env.example`):
-- **root:** `ST_ROOT_USER` / `ST_ROOT_PASS_HASH` (bcrypt)
-- **user:** `ST_USER_USER` / `ST_USER_PASS_HASH` (bcrypt)
-
-Copy `.env.example` to `.env` and configure your own credentials.
-
 ---
 
 ## License
