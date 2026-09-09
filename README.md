@@ -82,7 +82,9 @@ $engine->translate('Hello', 'pt-BR', 'en');
 php -S localhost:8000 index.php
 ```
 
-Access `http://localhost:8000/index.php?key=duckstack2024` in your browser.
+Access `http://localhost:8000/index.php?key=YOUR_ADMIN_KEY` in your browser.
+
+Set `ST_ADMIN_KEY` in your `.env` file.
 
 ### Terminal Commands
 
@@ -157,9 +159,11 @@ Input Text
 | `root` | Create, edit, term:add |
 | `user` | Download, update, pkg:list, term:find |
 
-Default credentials:
-- **root:** `quinvula` / `2d00ck4q`
-- **user:** `user` / `user123`
+Default credentials are set via environment variables (see `.env.example`):
+- **root:** `ST_ROOT_USER` / `ST_ROOT_PASS_HASH` (bcrypt)
+- **user:** `ST_USER_USER` / `ST_USER_PASS_HASH` (bcrypt)
+
+Copy `.env.example` to `.env` and configure your own credentials.
 
 ---
 
