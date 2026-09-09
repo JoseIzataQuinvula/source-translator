@@ -27,6 +27,8 @@ class SmartEngine
     const STATUS_NO_TRANSLATE_TAG = 108;
     const STATUS_SENTENCE_TRANSLATED = 109;
 
+    private const LOCALE_REGEX = '/^[a-zA-Z0-9_-]+$/';
+
     private array $doNotTranslate = [
         'jose izata quinvula',
         'duck stack',
@@ -66,14 +68,35 @@ class SmartEngine
         $this->pendingFile = $dir . '/pending_translations.json';
         $this->activeLanguages = array_map('strtolower', $activeLanguages);
 
+        $this->activeLanguages = array_filter(
+            $this->activeLanguages,
+            fn($lang) => $this->isValidLocale($lang)
+        );
+
         if (!is_dir($this->localesDir)) {
             mkdir($this->localesDir, 0755, true);
         }
     }
 
+    private function isValidLocale(string $locale): bool
+    {
+        return preg_match(self::LOCALE_REGEX, $locale) === 1;
+    }
+
+    private function sanitizeText(string $text): string
+    {
+        $text = str_replace(["\0", "\x01", "\x02", "\x03"], '', $text);
+        $text = mb_substr($text, 0, 10000, 'UTF-8');
+        return $text;
+    }
+
     private function loadLanguage(string $lang): bool
     {
         $lang = strtolower($lang);
+
+        if (!$this->isValidLocale($lang)) {
+            return false;
+        }
 
         if (!in_array($lang, $this->activeLanguages)) {
             return false;
@@ -114,7 +137,14 @@ class SmartEngine
     public function translate(string $text, string $targetLang, string $sourceLang = 'pt'): array
     {
         $start = microtime(true);
-        $cleanText = trim($text);
+        $cleanText = $this->sanitizeText(trim($text));
+
+        $targetLang = strtolower($targetLang);
+        $sourceLang = strtolower($sourceLang);
+
+        if (!$this->isValidLocale($targetLang) || !$this->isValidLocale($sourceLang)) {
+            return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_LANGUAGE_NOT_SUPPORTED, 'Invalid locale code.', 0);
+        }
 
         if (empty($cleanText)) {
             return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_SUCCESS, null, 0);
@@ -134,8 +164,6 @@ class SmartEngine
         }
 
         $lowerText = mb_strtolower($cleanText, 'UTF-8');
-        $sourceLang = strtolower($sourceLang);
-        $targetLang = strtolower($targetLang);
 
         // RULE A: Same language - no translation needed
         if ($sourceLang === $targetLang) {
@@ -445,13 +473,21 @@ class SmartEngine
 
     private function downloadLanguagePackage(string $lang): void
     {
+        if (!$this->isValidLocale($lang)) {
+            return;
+        }
+
         $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
+
+        if (strpos($cdnUrl, 'https://') !== 0) {
+            return;
+        }
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $cdnUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, 'SourceTranslator/1.0');
 
         $content = curl_exec($ch);

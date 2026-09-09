@@ -1,3 +1,4 @@
+import re
 import time
 from typing import List, Optional
 
@@ -10,6 +11,17 @@ from .models import (
     CacheStats,
     SUPPORTED_LANGUAGES,
 )
+
+LOCALE_REGEX = re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
+def is_valid_locale(locale: str) -> bool:
+    return bool(LOCALE_REGEX.match(locale))
+
+
+def sanitize_text(text: str) -> str:
+    text = text.replace('\x00', '').replace('\x01', '').replace('\x02', '').replace('\x03', '')
+    return text[:10000]
 
 
 class SourceTranslator:
@@ -31,6 +43,11 @@ class SourceTranslator:
         target_lang: str,
     ) -> TranslationResult:
         start = time.time()
+
+        text = sanitize_text(text)
+
+        if not is_valid_locale(source_lang) or not is_valid_locale(target_lang):
+            raise ValueError("Invalid locale code")
 
         cached = self.cache.get(text, target_lang)
         if cached:

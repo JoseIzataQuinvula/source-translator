@@ -162,6 +162,24 @@ Input Text
 
 ---
 
+## Security for Developers / Seguranca para Desenvolvedores
+
+**PT-BR:**
+1. **Localizacao dos Arquivos**: Armazene os arquivos de traducao e cache fora do diretorio publico do servidor web (ex: fora de `public_html` ou `www`).
+2. **Credenciais**: Nunca coloque chaves de API diretamente no codigo-fonte. Utilize variaveis de ambiente (`.env`).
+3. **Exibicao de Texto**: Ao renderizar traducoes que aceitam entrada de usuarios no HTML, utilize sempre sanitizacao/escape (ex: `htmlspecialchars()` no PHP ou mecanismos nativos do React/Vue).
+4. **Validacao de Locale**: O SDK valida automaticamente os codigos de idioma com regex. Locale invalido e rejeitado.
+5. **Sanitizacao de Input**: Textos com null bytes ou caracteres de controle sao removidos automaticamente.
+
+**EN:**
+1. **File Location**: Store translation and cache files outside your web server's public directory (e.g., outside `public_html` or `www`).
+2. **Credentials**: Never put API keys directly in source code. Use environment variables (`.env`).
+3. **Text Rendering**: When rendering translations that accept user input in HTML, always use sanitization/escaping (e.g., `htmlspecialchars()` in PHP or native React/Vue mechanisms).
+4. **Locale Validation**: The SDK automatically validates language codes with regex. Invalid locales are rejected.
+5. **Input Sanitization**: Texts with null bytes or control characters are automatically removed.
+
+---
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

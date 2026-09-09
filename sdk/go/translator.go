@@ -10,8 +10,27 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 )
+
+var localeRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+func isValidLocale(locale string) bool {
+	return localeRegex.MatchString(locale)
+}
+
+func sanitizeText(text string) string {
+	text = strings.ReplaceAll(text, "\x00", "")
+	text = strings.ReplaceAll(text, "\x01", "")
+	text = strings.ReplaceAll(text, "\x02", "")
+	text = strings.ReplaceAll(text, "\x03", "")
+	if len(text) > 10000 {
+		text = text[:10000]
+	}
+	return text
+}
 
 type TranslateRequest struct {
 	Text       string `json:"text"`
@@ -88,6 +107,12 @@ func NewSourceTranslator(cacheDir ...string) *SourceTranslator {
 
 func (t *SourceTranslator) Translate(req TranslateRequest) (*TranslationResult, error) {
 	start := time.Now()
+
+	req.Text = sanitizeText(req.Text)
+
+	if !isValidLocale(req.SourceLang) || !isValidLocale(req.TargetLang) {
+		return nil, fmt.Errorf("invalid locale code")
+	}
 
 	if cached := t.cache.get(req.Text, req.TargetLang); cached != nil {
 		return &TranslationResult{
