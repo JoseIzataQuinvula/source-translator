@@ -88,15 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
 </div>
 
 <div class="helper-bar">
-    <span>@pt-AO</span>
-    <span>@pt-BR</span>
-    <span>@en</span>
-    <span>@idioma download</span>
-    <span>@idioma update</span>
-    <span>help</span>
-    <span>term:find</span>
-    <span>help</span>
-    <span>clear</span>
+    <?php $recent = getRecentCommands(); ?>
+    <?php if (!empty($recent)): ?>
+        <?php foreach ($recent as $rc): ?>
+            <span><?= htmlspecialchars($rc) ?></span>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <span>@pt-AO</span>
+        <span>@pt-BR</span>
+        <span>@en</span>
+        <span>help</span>
+        <span>clear</span>
+    <?php endif; ?>
 </div>
 
 <div class="author">Jose Izata Quinvula | joseizataquinvula.pages.dev | DUCK STACK</div>
