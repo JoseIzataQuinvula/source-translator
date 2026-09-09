@@ -156,7 +156,8 @@ Input Text
 
 | Role | Access |
 |------|--------|
-| `root` | Create, edit, term:add |
+| `root` | Create, edit, term:add, full access |
+| `editor` | Edit existing packages |
 | `user` | Download, update, pkg:list, term:find |
 
 ---
