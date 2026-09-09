@@ -92,23 +92,23 @@ class SmartEngine
 
     private function loadLanguage(string $lang): bool
     {
-        $lang = strtolower($lang);
-
         if (!$this->isValidLocale($lang)) {
             return false;
         }
 
-        if (!in_array($lang, $this->activeLanguages)) {
+        $key = strtolower($lang);
+
+        if (!in_array($key, $this->activeLanguages)) {
             return false;
         }
 
-        if (isset($this->loadedLanguages[$lang])) {
+        if (isset($this->loadedLanguages[$key])) {
             return true;
         }
 
-        $this->loadedLanguages[$lang] = true;
-        $this->maps[$lang] = [];
-        $this->reverseMaps[$lang] = [];
+        $this->loadedLanguages[$key] = true;
+        $this->maps[$key] = [];
+        $this->reverseMaps[$key] = [];
 
         $filePath = $this->localesDir . $lang . '.json';
 
@@ -121,11 +121,11 @@ class SmartEngine
             $data = json_decode($content, true);
 
             if (is_array($data)) {
-                $this->maps[$lang] = $data;
+                $this->maps[$key] = $data;
 
                 foreach ($data as $id => $text) {
                     $cleanText = mb_strtolower(trim($text), 'UTF-8');
-                    $this->reverseMaps[$lang][$cleanText] = $id;
+                    $this->reverseMaps[$key][$cleanText] = $id;
                 }
             }
             return true;
@@ -139,12 +139,12 @@ class SmartEngine
         $start = microtime(true);
         $cleanText = $this->sanitizeText(trim($text));
 
-        $targetLang = strtolower($targetLang);
-        $sourceLang = strtolower($sourceLang);
-
         if (!$this->isValidLocale($targetLang) || !$this->isValidLocale($sourceLang)) {
             return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_LANGUAGE_NOT_SUPPORTED, 'Invalid locale code.', 0);
         }
+
+        $sourceKey = strtolower($sourceLang);
+        $targetKey = strtolower($targetLang);
 
         if (empty($cleanText)) {
             return $this->buildResponse($text, $sourceLang, $targetLang, '', self::STATUS_SUCCESS, null, 0);
@@ -166,7 +166,7 @@ class SmartEngine
         $lowerText = mb_strtolower($cleanText, 'UTF-8');
 
         // RULE A: Same language - no translation needed
-        if ($sourceLang === $targetLang) {
+        if ($sourceKey === $targetKey) {
             return $this->buildResponse(
                 $cleanText,
                 $sourceLang,
@@ -192,7 +192,7 @@ class SmartEngine
         }
 
         // 1. Check if target language is supported
-        if (!in_array($targetLang, $this->activeLanguages)) {
+        if (!in_array($targetKey, $this->activeLanguages)) {
             return $this->buildResponse(
                 $cleanText,
                 $sourceLang,
@@ -209,7 +209,7 @@ class SmartEngine
         $loadedTarget = $this->loadLanguage($targetLang);
 
         // RULE C: If word already exists in target language dictionary, skip
-        if ($loadedTarget && isset($this->reverseMaps[$targetLang][$lowerText])) {
+        if ($loadedTarget && isset($this->reverseMaps[$targetKey][$lowerText])) {
             return $this->buildResponse(
                 $cleanText,
                 $sourceLang,
@@ -223,12 +223,12 @@ class SmartEngine
 
         // 3. LEVEL 1: Try indexed dictionary - full sentence match (instant, offline)
         if ($loadedSource && $loadedTarget) {
-            if (isset($this->reverseMaps[$sourceLang][$lowerText])) {
-                $id = $this->reverseMaps[$sourceLang][$lowerText];
+            if (isset($this->reverseMaps[$sourceKey][$lowerText])) {
+                $id = $this->reverseMaps[$sourceKey][$lowerText];
 
-                if (isset($this->maps[$targetLang][$id])) {
+                if (isset($this->maps[$targetKey][$id])) {
                     return $this->buildResponse(
-                        $this->maps[$targetLang][$id],
+                        $this->maps[$targetKey][$id],
                         $sourceLang,
                         $targetLang,
                         'native_dictionary',
@@ -242,7 +242,7 @@ class SmartEngine
 
         // 4. LEVEL 2: Smart sentence segmentation - word-by-word translation
         if ($loadedSource && $loadedTarget) {
-            $translated = $this->translateBySegments($cleanText, $sourceLang, $targetLang);
+            $translated = $this->translateBySegments($cleanText, $sourceKey, $targetKey);
 
             if ($translated !== null) {
                 return $this->buildResponse(
@@ -259,7 +259,7 @@ class SmartEngine
 
         // 5. Check local cache
         $cache = $this->loadCache();
-        $hashKey = md5($cleanText . '_' . $sourceLang . '_' . $targetLang);
+        $hashKey = md5($cleanText . '_' . $sourceKey . '_' . $targetKey);
 
         if (isset($cache[$hashKey])) {
             return $this->buildResponse(
