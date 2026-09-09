@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
             foreach ($packageData as $otherLang => $otherInfo) {
                 if ($otherLang !== $lang) {
                     $connDate = $otherInfo['date'] ? " {$otherInfo['date']}" : "";
-                    $translations[] = "@{$otherLang} ({$otherInfo['count']} palavras{$connDate})";
+                    $translations[] = "@{$otherLang} ({$otherInfo['count']} traducoes{$connDate})";
                 }
             }
             $transStr = !empty($translations) ? " traducoes: " . implode('; ', $translations) : "";
