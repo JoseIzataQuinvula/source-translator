@@ -1,0 +1,9 @@
+target/
+*.swp
+*.swo
+*~
+.env
+data/audit.log
+sdk/php/cache.json
+sdk/php/missing.json
+sdk/php/pending_translations.json
