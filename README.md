@@ -19,10 +19,10 @@ Ultra-fast translation engine based on ID-indexed JSON dictionaries.
 Source Translator translates content between languages without paid third-party APIs. Translations are performed by direct mapping of **unique IDs** in native JSON package files (`/locales/{lang}.json`).
 
 ```
-PT: {"1001": "Ola", "1002": "Mundo"}
+PT-BR: {"1001": "Ola", "1002": "Mundo"}
 EN: {"1001": "Hello", "1002": "World"}
 
-Lookup: PT #1001 -> EN #1001 = "Hello" (0ms)
+Lookup: PT-BR #1001 -> EN #1001 = "Hello" (0ms)
 ```
 
 ---
@@ -40,7 +40,7 @@ require_once __DIR__ . '/sdk/php/src/SmartEngine.php';
 
 use SourceTranslator\SmartEngine;
 
-$engine = new SmartEngine(['en', 'pt-AO']);
+$engine = new SmartEngine(['en', 'pt-AO', 'pt-BR']);
 
 $result = $engine->translate('Hello', 'pt-AO', 'en');
 echo $result['translated_text']; // "Ola"
@@ -59,8 +59,9 @@ echo $result['latency_ms'];      // 0
 | Cache-First | Local JSON cache, then web providers |
 | Multi-Provider | Google, Bing, MyMemory with automatic fallback |
 | Missing Tracker | Records untranslated words for developer review |
-| Auto-Download | Fetches language packages from CDN on demand |
+| Auto-Download | Fetches language packages from GitHub on demand |
 | Author Protection | Protected terms cannot be translated |
+| Role-Based Auth | Root (full access) and User (limited access) |
 
 ---
 
@@ -69,13 +70,13 @@ echo $result['latency_ms'];      // 0
 If your project requests a language not in your local `/locales/` folder, the engine automatically downloads the official package from the GitHub repository.
 
 ```php
-// Automatically downloads pt.json if not present locally
-$engine->translate('Hello', 'pt', 'en');
+// Automatically downloads pt-BR.json if not present locally
+$engine->translate('Hello', 'pt-BR', 'en');
 ```
 
 ---
 
-## Running the CLI Panel Locally
+## Running the Terminal UI
 
 ```bash
 php -S localhost:8000 index.php
@@ -83,14 +84,18 @@ php -S localhost:8000 index.php
 
 Access `http://localhost:8000/index.php?key=duckstack2024` in your browser.
 
-### CLI Commands
+### Terminal Commands
 
 | Command | Description |
 |---------|-------------|
 | `@en text @pt-AO` | Translate between languages |
-| `pkg:list` | List all language packages |
-| `pkg:create <lang>` | Create new language package |
-| `pkg:download <lang>` | Download package from CDN |
+| `@pacotes list` | List packages from GitHub |
+| `@pacotes locais list` | List local packages |
+| `@idioma download` | Download package from GitHub |
+| `@idioma update` | Update local package |
+| `@login user pass` | Authenticate as root or user |
+| `@user` | Show current user |
+| `logout` | Logout |
 | `term:find <text>` | Search term across dictionaries |
 | `stats` | Show statistics |
 | `clear` | Clear terminal |
@@ -122,7 +127,7 @@ Input Text
 |------|----------|
 | `en` | English |
 | `pt-AO` | Portuguese (Angola) |
-| `pt` | Portuguese |
+| `pt-BR` | Portuguese (Brazil) |
 | `es` | Spanish |
 | `fr` | French |
 
@@ -134,6 +139,7 @@ Input Text
 |------|-------------|
 | 0 | Success |
 | 101 | Language not supported |
+| 102 | Translation missing |
 | 103 | Cache hit |
 | 104 | Web translated |
 | 105 | Offline fallback |
@@ -141,6 +147,19 @@ Input Text
 | 107 | Do Not Translate (skip) |
 | 108 | HTML notranslate tag |
 | 109 | Segment translation |
+
+---
+
+## Roles
+
+| Role | Access |
+|------|--------|
+| `root` | Create, edit, term:add |
+| `user` | Download, update, pkg:list, term:find |
+
+Default credentials:
+- **root:** `quinvula` / `2d00ck4q`
+- **user:** `user` / `user123`
 
 ---
 
