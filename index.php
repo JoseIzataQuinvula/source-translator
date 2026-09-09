@@ -234,46 +234,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cmd'])) {
         $lang = $m[1];
         $file = $localesDir . "{$lang}.json";
         $exists = file_exists($file);
-        $localCount = $exists ? count(json_decode(file_get_contents($file), true) ?: []) : 0;
-        $localDate = $exists ? date('d/m/Y H:i', filemtime($file)) : null;
         
-        $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $cdnUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        $content = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        
-        if ($httpCode === 200 && !empty($content)) {
-            $data = json_decode($content, true);
-            if (is_array($data)) {
-                $remoteCount = count($data);
-                $localContent = $exists ? file_get_contents($file) : '';
-                $isUpToDate = $exists && trim($localContent) === trim($content);
-                
-                if ($isUpToDate) {
-                    $history[] = ['out' => "[OK] Pacote {$lang}.json ja esta atualizado. ({$remoteCount} termos, {$localDate})", 'type' => 'skip'];
-                } else {
+        if ($exists) {
+            $data = json_decode(file_get_contents($file), true) ?: [];
+            $count = count($data);
+            $date = date('d/m/Y H:i', filemtime($file));
+            $history[] = ['out' => "[OK] Pacote {$lang}.json ja existe. ({$count} termos, {$date})", 'type' => 'skip'];
+        } else {
+            $cdnUrl = "https://raw.githubusercontent.com/JoseIzataQuinvula/source-translator/main/sdk/php/locales/{$lang}.json";
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $cdnUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $content = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200 && !empty($content)) {
+                $data = json_decode($content, true);
+                if (is_array($data)) {
                     file_put_contents($file, $content);
-                    if ($exists) {
-                        $history[] = ['out' => "[OK] Pacote {$lang}.json atualizado! ({$localCount} -> {$remoteCount} termos)", 'type' => 'ok'];
-                    } else {
-                        $history[] = ['out' => "[OK] Pacote {$lang}.json baixado! ({$remoteCount} termos)", 'type' => 'ok'];
-                    }
+                    $history[] = ['out' => "[OK] Pacote {$lang}.json baixado! (" . count($data) . " termos)", 'type' => 'ok'];
+                } else {
+                    $history[] = ['out' => "Formato invalido no CDN.", 'type' => 'err'];
                 }
             } else {
-                $history[] = ['out' => "Formato invalido no CDN.", 'type' => 'err'];
-            }
-        } else {
-            if (!$exists) {
                 file_put_contents($file, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                 $history[] = ['out' => "Pacote remoto nao encontrado. Criado {$lang}.json vazio.", 'type' => 'skip'];
-            } else {
-                $history[] = ['out' => "ERRO: Nao foi possivel acessar o GitHub. Local: {$localCount} termos ({$localDate})", 'type' => 'err'];
             }
         }
     } elseif (preg_match('/^@([\w-]+)\s+update$/i', $cmd, $m)) {
